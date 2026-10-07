@@ -1,0 +1,31 @@
+/* stylesheet.css
+ * Arrera Top Bar - Stylesheets
+ * Distribution Arrera Blue
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+/* Style : Transparent */
+#panel.arrera-topbar-transparent {
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Style : Flottant */
+#panel.arrera-topbar-floating {
+    margin: 8px 16px 0 16px;
+    border-radius: 16px;
+    background-color: rgba(30, 30, 30, 0.85);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Style : Pilule */
+#panel.arrera-topbar-pill {
+    margin: 6px 24px 0 24px;
+    border-radius: 9999px;
+    background-color: rgba(20, 20, 20, 0.9);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}

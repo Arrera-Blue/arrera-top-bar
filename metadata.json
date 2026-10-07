@@ -1,0 +1,16 @@
+{
+  "name": "Arrera Top Bar",
+  "description": "Barre supérieure moderne et personnalisée de la distribution Arrera Blue pour GNOME Shell.",
+  "uuid": "top-bar@linux.arrera-software.fr",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.top-bar",
+  "url": "https://github.com/Arrera-Blue/arrera-top-bar",
+  "version": 1
+}
