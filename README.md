@@ -56,6 +56,12 @@ Configurez les options directement dans le terminal avec le script interactif :
   - `auto` *(par défaut)* : Détecte automatiquement la luminosité de la bande supérieure du fond d'écran pour adapter la couleur des textes, icônes et boutons (sombre sur fond clair, clair sur fond sombre).
   - `white` : Force les éléments en blanc avec une ombre protectrice de sécurité.
   - `black` : Force les éléments en noir.
+- **Masquage total de la barre supérieure (`hide-top-bar`)** :
+  - `false` *(par défaut)* : Affichage normal de la barre supérieure.
+  - `true` : Masque complètement le panneau supérieur et ses éléments natifs (date, paramètres rapides, logo Arrera), libère la zone d'écran pour permettre aux applications maximisées d'occuper 100% de la hauteur de l'écran (suppression des *struts* GNOME), et affiche la zone AppIndicator sous forme d'une élégante petite pilule noire flottante sur le bureau (qui s'efface automatiquement lorsqu'une fenêtre est maximisée ou en plein écran pour libérer l'accès aux boutons de contrôle de la fenêtre).
+- **Position des indicateurs d'applications (`appindicator-position`)** :
+  - `right` *(par défaut)* : Positionne les icônes de la zone de notification (AppIndicator) à droite du panneau supérieur.
+  - `left` : Positionne les icônes de notification à gauche, immédiatement après le logo Arrera Blue.
 - **Remplacement du bouton Activités** : Logo officiel Arrera Blue à la place du bouton natif.
 - **Paramètre GSettings `logo-color`** (`org.gnome.shell.extensions.top-bar`) :
   - `colored` *(par défaut)* : S'adapte dynamiquement à la couleur d'accentuation de GNOME (`org.gnome.desktop.interface accent-color`).

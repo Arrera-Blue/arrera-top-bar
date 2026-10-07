@@ -176,3 +176,42 @@
 #panel.topbar-theme-tinted-light .appindicator-icon {
     color: #1a1a1a;
 }
+
+/* ==========================================================================
+   Mode Barre Masquée (Petite pilule noire flottante AppIndicator)
+   ========================================================================== */
+
+#panel.topbar-hidden-mode {
+    background-color: transparent !important;
+    background-gradient-direction: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Petite pilule noire flottante pour les indicateurs d'applications */
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon,
+#panel.topbar-hidden-mode .appindicator-box {
+    background-color: rgba(18, 18, 18, 0.88);
+    border-radius: 9999px;
+    padding: 3px 8px;
+    margin: 3px 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:hover {
+    background-color: rgba(35, 35, 35, 0.95);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.60);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:active,
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:checked {
+    background-color: rgba(45, 45, 45, 1.0);
+}
+
+#panel.topbar-hidden-mode .appindicator-icon {
+    color: #ffffff;
+    icon-size: 18px;
+    icon-shadow: 0 1px 2px rgba(0, 0, 0, 0.80);
+}

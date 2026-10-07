@@ -8,6 +8,8 @@ KEY_APP_ID="custom-app-id"
 KEY_KEEP_ACTIVITIES="keep-activities-button"
 KEY_THEME="theme"
 KEY_INVISIBLE_COLOR="invisible-elements-color"
+KEY_APPINDICATOR_POS="appindicator-position"
+KEY_HIDE_BAR="hide-top-bar"
 
 # Couleurs pour le terminal
 GREEN="\033[0;32m"
@@ -66,6 +68,12 @@ while true; do
     val_invisible_color=$(get_val "$KEY_INVISIBLE_COLOR")
     [ -z "$val_invisible_color" ] && val_invisible_color="auto"
 
+    val_hide_bar=$(get_val "$KEY_HIDE_BAR")
+    [ -z "$val_hide_bar" ] && val_hide_bar="false"
+
+    val_appindicator_pos=$(get_val "$KEY_APPINDICATOR_POS")
+    [ -z "$val_appindicator_pos" ] && val_appindicator_pos="right"
+
     val_logo_color=$(get_val "$KEY_LOGO_COLOR")
     [ -z "$val_logo_color" ] && val_logo_color="colored"
 
@@ -109,6 +117,14 @@ while true; do
             ;;
     esac
 
+    is_appind_left="false"
+    is_appind_right="false"
+    if [ "$val_appindicator_pos" = "right" ]; then
+        is_appind_right="true"
+    else
+        is_appind_left="true"
+    fi
+
     is_colored="false"
     is_white="false"
     is_black="false"
@@ -145,29 +161,36 @@ while true; do
         echo -e "    ${RED}[ Verrouillé (activer le thème Invisible - option 2) ]${RESET}"
     fi
     echo ""
+    echo -e "${BOLD}Affichage & Espace plein écran :${RESET}"
+    echo -e " 8) Masquer la barre (pilule seule)    : $(format_status "$val_hide_bar")"
+    echo ""
+    echo -e "${BOLD}Zone AppIndicator (Notification Tray) :${RESET}"
+    echo -e " 9) Position : À Gauche                : $(format_status "$is_appind_left")"
+    echo -e " 10) Position : À Droite               : $(format_status "$is_appind_right")"
+    echo ""
     echo -e "${BOLD}Style du logo Arrera :${RESET}"
-    echo -e " 8) Logo Coloré (accentuation GNOME)   : $(format_status "$is_colored")"
-    echo -e " 9) Logo Blanc                         : $(format_status "$is_white")"
-    echo -e " 10) Logo Noir                         : $(format_status "$is_black")"
+    echo -e " 11) Logo Coloré (accentuation GNOME)  : $(format_status "$is_colored")"
+    echo -e " 12) Logo Blanc                        : $(format_status "$is_white")"
+    echo -e " 13) Logo Noir                         : $(format_status "$is_black")"
     echo ""
     echo -e "${BOLD}Action du bouton au clic :${RESET}"
-    echo -e " 11) Lancer une application au clic    : $(format_status "$val_launch_app")"
+    echo -e " 14) Lancer une application au clic    : $(format_status "$val_launch_app")"
     if [ -n "$val_app_id" ]; then
-        echo -e " 12) Application configurée            : ${BOLD}$val_app_id${RESET}"
+        echo -e " 15) Application configurée            : ${BOLD}$val_app_id${RESET}"
     else
-        echo -e " 12) Application configurée            : ${RED}[ Non définie ]${RESET}"
+        echo -e " 15) Application configurée            : ${RED}[ Non définie ]${RESET}"
     fi
     if [ "$val_launch_app" = "true" ]; then
-        echo -e " 13) Conserver le bouton Activités    : $(format_status "$val_keep_activities")"
+        echo -e " 16) Conserver le bouton Activités    : $(format_status "$val_keep_activities")"
     else
-        echo -e " 13) Conserver le bouton Activités    : ${RED}[ Verrouillé (activer l'option 11) ]${RESET}"
+        echo -e " 16) Conserver le bouton Activités    : ${RED}[ Verrouillé (activer l'option 14) ]${RESET}"
     fi
     echo ""
     echo -e " r) Réinitialiser les valeurs par défaut"
     echo -e " q) Quitter"
     echo ""
     echo -e "${BLUE}----------------------------------------${RESET}"
-    read -rp "Choisissez une option (1-13, r, q) : " choix
+    read -rp "Choisissez une option (1-16, r, q) : " choix
 
     case "$choix" in
         1)
@@ -207,22 +230,31 @@ while true; do
             fi
             ;;
         8)
-            set_val "$KEY_LOGO_COLOR" "'colored'"
+            toggle_val "$KEY_HIDE_BAR"
             ;;
         9)
-            set_val "$KEY_LOGO_COLOR" "'white'"
+            set_val "$KEY_APPINDICATOR_POS" "'left'"
             ;;
         10)
-            set_val "$KEY_LOGO_COLOR" "'black'"
+            set_val "$KEY_APPINDICATOR_POS" "'right'"
             ;;
         11)
+            set_val "$KEY_LOGO_COLOR" "'colored'"
+            ;;
+        12)
+            set_val "$KEY_LOGO_COLOR" "'white'"
+            ;;
+        13)
+            set_val "$KEY_LOGO_COLOR" "'black'"
+            ;;
+        14)
             toggle_val "$KEY_LAUNCH_APP"
             current_launch=$(get_val "$KEY_LAUNCH_APP")
             if [ "$current_launch" != "true" ]; then
                 set_val "$KEY_KEEP_ACTIVITIES" false
             fi
             ;;
-        12)
+        15)
             echo ""
             read -rp "Entrez l'identifiant de l'app ou commande (ex: ptyxis, org.gnome.Nautilus.desktop) : " new_app
             if [ -n "$new_app" ]; then
@@ -230,19 +262,21 @@ while true; do
                 set_val "$KEY_LAUNCH_APP" true
             fi
             ;;
-        13)
+        16)
             current_launch=$(get_val "$KEY_LAUNCH_APP")
             if [ "$current_launch" = "true" ]; then
                 toggle_val "$KEY_KEEP_ACTIVITIES"
             else
                 echo ""
-                echo -e "${RED}⚠️  L'option 13 ne peut être activée que si l'option 11 (Lancer une application au clic) est active.${RESET}"
+                echo -e "${RED}⚠️  L'option 16 ne peut être activée que si l'option 14 (Lancer une application au clic) est active.${RESET}"
                 sleep 2
             fi
             ;;
         r|R)
             set_val "$KEY_THEME" "'vanilla'"
             set_val "$KEY_INVISIBLE_COLOR" "'auto'"
+            set_val "$KEY_HIDE_BAR" false
+            set_val "$KEY_APPINDICATOR_POS" "'right'"
             set_val "$KEY_LOGO_COLOR" "'colored'"
             set_val "$KEY_LAUNCH_APP" false
             set_val "$KEY_APP_ID" "''"

@@ -12,10 +12,11 @@ Ce document sert de guide de référence complet et autonome pour tout agent d'I
 * **Environnement** : GNOME Shell (versions 45 à 50) sur Wayland & X11 (GJS, ES Modules, Clutter, St, Libadwaita)
 * **Objectif** : Une extension moderne et modulaire pour personnaliser, styliser et contrôler la barre supérieure native (`Main.panel`) de GNOME Shell afin de s'intégrer harmonieusement avec le design system Arrera Blue.
 * **Fonctionnalités principales** :
-  * Personnalisation visuelle du panneau (`Main.panel`) via des styles prédéfinis : par défaut, transparent, flottant et pilule compacte.
-  * Contrôle fin de la visibilité des éléments natifs : bouton Activités, horloge/calendrier (`dateMenu`), et paramètres rapides (`quickSettings`).
-  * Adaptation contextuelle (masquage automatique, comportement en plein écran).
-  * Interface graphique de préférences native en **Libadwaita** (`Adw.PreferencesWindow`) synchronisée avec GSettings.
+  * Personnalisation visuelle du panneau (`Main.panel`) via des thèmes : Vanilla (défaut GNOME), Invisible (transparent avec contraste dynamique), Tinté sombre et Tinté clair.
+  * Masquage total de la barre supérieure (`hide-top-bar`) avec suppression des *struts* GNOME (extension des fenêtres maximisées à 100% de la hauteur de l'écran) et isolation d'AppIndicator en pilule noire flottante.
+  * Intégration et déplacement de la zone de notification AppIndicator (`appindicator-position` : à gauche ou à droite).
+  * Personnalisation et remplacement du bouton Activités par le logo Arrera Blue (adaptatif à la couleur d'accentuation, blanc ou noir).
+  * Lancement direct d'applications au clic sur le bouton Arrera avec conservation optionnelle du bouton Activités.
   * Outil de configuration interactif en terminal (`settings.sh`).
   * Intégration et synergie avec les extensions sœurs de la suite Arrera Blue (`dock@linux.arrera-software.fr` et `app-menu@linux.arrera-software.fr`).
 
@@ -63,19 +64,25 @@ Gère la personnalisation de la barre supérieure et le remplacement propre du b
   * Masque le conteneur natif (`Main.panel.statusArea.activities.container.visible = false`) pour éviter tout conflit de mise en page ou de points d'indicateurs de bureau.
   * Déclenche `Main.overview.toggle()` au clic et synchronise l'état pseudo-classe `checked` avec l'Overview.
   * Écoute en continu le signal `changed::accent-color` de `org.gnome.desktop.interface` pour rafraîchir l'icône à chaud.
-* **Contrôle de `Main.panel`** :
-  * Gère l'application dynamique des classes CSS selon la clé `style-mode` (`arrera-topbar-default`, `arrera-topbar-transparent`, `arrera-topbar-floating`, `arrera-topbar-pill`).
-  * Pilote la visibilité des acteurs natifs de `Main.panel.statusArea` (`activities`, `dateMenu`, `quickSettings`).
+* **Contrôle de `Main.panel` et des thèmes** :
+  * Gère l'application dynamique des classes CSS selon la clé `theme` (`topbar-theme-invisible`, `topbar-theme-tinted-dark`, `topbar-theme-tinted-light`).
+  * En mode `invisible`, applique la détection de luminosité du fond d'écran via `GdkPixbuf` (`topbar-elements-dark` vs `topbar-elements-light`) ou respecte le forçage utilisateur (`invisible-elements-color`).
+  * En mode `hide-top-bar`, applique `topbar-hidden-mode`, masque les composants natifs, libère les *struts* d'écran (`actorData.affectsStruts = false` dans `Main.layoutManager._trackedActors`), et affiche les icônes AppIndicator en pilule noire flottante sur le bureau tout en masquant dynamiquement le conteneur lorsqu'une fenêtre est maximisée ou en plein écran pour libérer l'accès aux boutons de contrôle.
+* **Intégration AppIndicator** :
+  * Synchronise `appindicator-position` avec la clé `tray-pos` de `org.gnome.shell.extensions.appindicator` (`left` ou `right`).
+  * Assure l'activation automatique de l'extension AppIndicator si disponible.
 * **Écoute GSettings** :
   * Enregistre les gestionnaires d'événements `changed::...` sur `_settings` et conserve leurs identifiants dans `_signalIds`.
 * **Méthode `destroy()`** :
-  * Détruit `ArreraActivitiesButton` et rétablit impérativement la visibilité native (`visible = true`) du bouton Activités d'origine.
+  * Rétablit inconditionnellement les *struts* natifs (`affectsStruts = true` et `Main.layoutManager._queueUpdateRegions()`).
+  * Détruit `ArreraActivitiesButton` et rétablit impérativement la visibilité native (`visible = true`) du bouton Activités, de la date (`dateMenu`) et des paramètres rapides (`quickSettings`).
   * Déconnecte tous les signaux GSettings via `_settings.disconnect(id)`.
   * Retire toutes les classes CSS personnalisées injectées dans `Main.panel`.
 
 ### `stylesheet.css` (Feuille de style GNOME Shell)
-* Cible l'acteur `#panel` et les classes appliquées par l'extension.
-* Règles de marges, de rayons de bordure (`border-radius`), de fonds translucides et d'ombres portées pour les modes flottants et pilules.
+* Cible `#panel` et ses classes thématiques (`.topbar-theme-invisible`, `.topbar-theme-tinted-dark`, `.topbar-theme-tinted-light`).
+* Gère les contrastes de texte, d'icônes et de points de bureaux virtuels (`.workspace-pill`, `.workspace-dot`) pour les modes clairs et transparents.
+* Cible `#panel.topbar-hidden-mode` avec fond transparent et style en pilule noire flottante (`rgba(18, 18, 18, 0.88)`, `border-radius: 9999px`, ombre portée douce) pour `.appindicator-status-icon` et `.appindicator-box`.
 
 ---
 
@@ -87,7 +94,9 @@ Le schéma est défini dans `schemas/org.gnome.shell.extensions.top-bar.gschema.
 | --- | --- | --- | --- | --- |
 | `logo-color` | `s` | `'colored'` | `'colored'`, `'white'`, `'black'` | Style de couleur du logo : coloré selon l'accentuation GNOME, blanc ou noir. |
 | `theme` | `s` | `'vanilla'` | `'vanilla'`, `'invisible'`, `'tinted-dark'`, `'tinted-light'` | Thème de la barre supérieure (Vanilla, Invisible transparent, Tinté sombre ou Tinté clair). |
-| `invisible-elements-color` | `s` | `'auto'` | `'auto'`, `'white'`, `'black'` | Couleur des éléments en mode invisible (automatique selon le fond d'écran, blanc forcé ou noir forcé). |
+| `invisible-elements-color` | `s` | `'auto'` | `'auto'`, `'white'` `'black'` | Couleur des éléments en mode invisible (automatique selon le fond d'écran, blanc forcé ou noir forcé). |
+| `hide-top-bar` | `b` | `false` | `true`, `false` | Masque totalement le panneau supérieur et ses éléments natifs, retire les *struts* pour libérer l'espace plein écran, et isole AppIndicator en pilule noire flottante. |
+| `appindicator-position` | `s` | `'right'` | `'left'`, `'right'` | Position de la zone d'indicateurs d'applications (à droite par défaut, ou à gauche près du logo Arrera). |
 | `launch-custom-app` | `b` | `false` | `true`, `false` | Lance une application spécifique au lieu d'ouvrir les activités. |
 | `custom-app-id` | `s` | `''` | Identifiant ou commande | Identifiant de l'application (.desktop) ou commande à lancer au clic. |
 | `keep-activities-button` | `b` | `false` | `true`, `false` | Conserve et affiche le bouton natif Activités de GNOME à droite du logo Arrera si le lancement d'app est actif. |

@@ -11,6 +11,7 @@ import Clutter from 'gi://Clutter';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
+import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -266,6 +267,7 @@ const THEME_CLASSES = [
     'topbar-theme-tinted-light',
     'invisible-dark-elements',
     'invisible-light-elements',
+    'topbar-hidden-mode',
 ];
 
 /**
@@ -323,7 +325,8 @@ export class ArreraTopBar {
                 this._settings.connect('changed::keep-activities-button', () => this._updateNativeActivitiesVisibility()),
                 this._settings.connect('changed::theme', () => this._applyTheme()),
                 this._settings.connect('changed::invisible-elements-color', () => this._applyTheme()),
-                this._settings.connect('changed::appindicator-position', () => this._applyAppIndicatorPosition())
+                this._settings.connect('changed::appindicator-position', () => this._applyAppIndicatorPosition()),
+                this._settings.connect('changed::hide-top-bar', () => this._updateBarVisibility())
             );
         }
 
@@ -331,6 +334,36 @@ export class ArreraTopBar {
         this._updateNativeActivitiesVisibility();
         this._applyTheme();
         this._applyAppIndicatorPosition();
+
+        // Écoute des signaux de fenêtres pour masquer l'AppIndicator quand une fenêtre est maximisée / plein écran
+        try {
+            global.window_manager.connectObject(
+                'size-changed', () => this._updateBarVisibility(),
+                'minimize', () => this._updateBarVisibility(),
+                'unminimize', () => this._updateBarVisibility(),
+                'destroy', () => this._updateBarVisibility(),
+                this
+            );
+            global.workspace_manager.connectObject(
+                'active-workspace-changed', () => this._updateBarVisibility(),
+                this
+            );
+            global.display.connectObject(
+                'restacked', () => this._updateBarVisibility(),
+                'in-fullscreen-changed', () => this._updateBarVisibility(),
+                'window-created', () => this._updateBarVisibility(),
+                this
+            );
+            Main.overview.connectObject(
+                'showing', () => this._updateBarVisibility(),
+                'hidden', () => this._updateBarVisibility(),
+                this
+            );
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la connexion aux signaux du gestionnaire de fenêtres: ${e}`);
+        }
+
+        this._updateBarVisibility();
     }
 
     _ensureAppIndicatorExtensionEnabled() {
@@ -360,7 +393,7 @@ export class ArreraTopBar {
         } catch (e) {
             console.warn(`[ArreraTopBar] Erreur lors de la lecture de appindicator-position: ${e}`);
         }
-        return 'left';
+        return 'right';
     }
 
     _applyAppIndicatorPosition() {
@@ -504,10 +537,146 @@ export class ArreraTopBar {
         }
     }
 
+    _isBarHidden() {
+        try {
+            if (this._settings?.settings_schema?.has_key('hide-top-bar'))
+                return this._settings.get_boolean('hide-top-bar');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de hide-top-bar: ${e}`);
+        }
+        return false;
+    }
+
+    _setAffectsStruts(affects) {
+        try {
+            const panelBox = Main.layoutManager.panelBox;
+            if (!panelBox)
+                return;
+
+            const actorData = Main.layoutManager._trackedActors?.find(a => a.actor === panelBox);
+            if (actorData && actorData.affectsStruts !== affects) {
+                actorData.affectsStruts = affects;
+                Main.layoutManager._queueUpdateRegions();
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la manipulation des struts: ${e}`);
+        }
+    }
+
+    _isWindowMaximizedOrFullscreen(metaWindow, monitorIndex) {
+        if (!metaWindow || metaWindow.minimized)
+            return false;
+
+        if (metaWindow.get_monitor() !== monitorIndex)
+            return false;
+
+        const windowType = metaWindow.get_window_type?.();
+        if (windowType !== Meta.WindowType.NORMAL)
+            return false;
+
+        try {
+            if (metaWindow.is_fullscreen?.())
+                return true;
+            if (typeof metaWindow.is_maximized === 'function' && metaWindow.is_maximized())
+                return true;
+            if (typeof metaWindow.get_maximized === 'function') {
+                const max = metaWindow.get_maximized();
+                if (max === 3 || (Meta.MaximizeFlags && max === Meta.MaximizeFlags.BOTH))
+                    return true;
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur vérification fenêtre maximisée: ${e}`);
+        }
+
+        return false;
+    }
+
+    _hasMaximizedOrFullscreenWindow() {
+        if (Main.overview?.visible)
+            return false;
+
+        try {
+            const panelBox = Main.layoutManager.panelBox;
+            if (!panelBox)
+                return false;
+
+            const monitor = Main.layoutManager.findMonitorForActor(panelBox)
+                ?? Main.layoutManager.primaryMonitor;
+            const monitorIndex = monitor?.index ?? Main.layoutManager.primaryIndex;
+            const workspace = global.workspace_manager?.get_active_workspace();
+            if (!workspace)
+                return false;
+
+            const windows = workspace.list_windows();
+            for (const win of windows) {
+                if (this._isWindowMaximizedOrFullscreen(win, monitorIndex))
+                    return true;
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur détection fenêtre maximisée: ${e}`);
+        }
+
+        return false;
+    }
+
+    _updateBarVisibility() {
+        const hidden = this._isBarHidden();
+        const panel = Main.panel;
+        const panelBox = Main.layoutManager.panelBox;
+
+        if (hidden) {
+            // 1. Libérer l'espace pour que les fenêtres maximisées montent jusqu'en haut
+            this._setAffectsStruts(false);
+
+            // 2. Appliquer la classe CSS masquant le panneau sauf AppIndicator
+            panel?.add_style_class_name('topbar-hidden-mode');
+
+            // 3. Masquer les éléments natifs et Arrera
+            if (this._activitiesButton)
+                this._activitiesButton.visible = false;
+            if (panel?.statusArea?.activities?.container)
+                panel.statusArea.activities.container.visible = false;
+            if (panel?.statusArea?.dateMenu?.container)
+                panel.statusArea.dateMenu.container.visible = false;
+            if (panel?.statusArea?.quickSettings?.container)
+                panel.statusArea.quickSettings.container.visible = false;
+
+            // 4. Si une fenêtre est maximisée ou en plein écran sur le moniteur, masquer la pilule AppIndicator
+            //    pour que la fenêtre puisse occuper tout l'écran sans être gênée
+            const hasMaximized = this._hasMaximizedOrFullscreenWindow();
+            if (panelBox)
+                panelBox.visible = !hasMaximized;
+        } else {
+            // 1. Rétablir les struts pour que les fenêtres maximisées respectent la barre
+            this._setAffectsStruts(true);
+
+            // 2. Rétablir la visibilité normale de panelBox
+            if (panelBox)
+                panelBox.visible = true;
+
+            // 3. Retirer la classe CSS
+            panel?.remove_style_class_name('topbar-hidden-mode');
+
+            // 4. Rétablir les éléments selon leurs réglages respectifs
+            if (this._activitiesButton)
+                this._activitiesButton.visible = true;
+            this._updateNativeActivitiesVisibility();
+            if (panel?.statusArea?.dateMenu?.container)
+                panel.statusArea.dateMenu.container.visible = true;
+            if (panel?.statusArea?.quickSettings?.container)
+                panel.statusArea.quickSettings.container.visible = true;
+        }
+    }
+
     _updateNativeActivitiesVisibility() {
         const nativeActivities = Main.panel.statusArea.activities;
         if (!nativeActivities?.container)
             return;
+
+        if (this._isBarHidden()) {
+            nativeActivities.container.visible = false;
+            return;
+        }
 
         const launchApp = this._settings?.get_boolean('launch-custom-app') ?? false;
         const keepActivities = this._settings?.get_boolean('keep-activities-button') ?? false;
@@ -523,6 +692,24 @@ export class ArreraTopBar {
     }
 
     destroy() {
+        // Déconnexion des écouteurs d'événements de fenêtres
+        try {
+            global.window_manager?.disconnectObject(this);
+            global.workspace_manager?.disconnectObject(this);
+            global.display?.disconnectObject(this);
+            Main.overview?.disconnectObject(this);
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur déconnexion signaux fenêtres: ${e}`);
+        }
+
+        // Rétablir inconditionnellement les struts natifs de GNOME Shell
+        this._setAffectsStruts(true);
+
+        // Rétablir inconditionnellement la visibilité de panelBox
+        if (Main.layoutManager.panelBox) {
+            Main.layoutManager.panelBox.visible = true;
+        }
+
         // Supprimer le bouton Arrera
         if (this._activitiesButton) {
             this._activitiesButton.destroy();
@@ -532,6 +719,14 @@ export class ArreraTopBar {
         // Rétablissement inconditionnel du bouton Activités natif
         if (Main.panel.statusArea.activities?.container) {
             Main.panel.statusArea.activities.container.visible = true;
+        }
+
+        // Rétablissement inconditionnel de la date et des paramètres rapides
+        if (Main.panel.statusArea.dateMenu?.container) {
+            Main.panel.statusArea.dateMenu.container.visible = true;
+        }
+        if (Main.panel.statusArea.quickSettings?.container) {
+            Main.panel.statusArea.quickSettings.container.visible = true;
         }
 
         // Rétablissement inconditionnel du style natif du panneau

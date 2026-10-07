@@ -52,9 +52,14 @@
         <choice value="left"/>
         <choice value="right"/>
       </choices>
-      <default>'left'</default>
+      <default>'right'</default>
       <summary>Position des indicateurs d'applications (AppIndicator)</summary>
-      <description>Définit l'emplacement des icônes de la zone de notification (AppIndicator) dans la barre supérieure : 'left' (à gauche, par défaut) ou 'right' (à droite).</description>
+      <description>Définit l'emplacement des icônes de la zone de notification (AppIndicator) dans la barre supérieure : 'right' (à droite, par défaut) ou 'left' (à gauche).</description>
+    </key>
+    <key name="hide-top-bar" type="b">
+      <default>false</default>
+      <summary>Masquer totalement la barre supérieure</summary>
+      <description>Si activé, masque tous les éléments natifs de la barre supérieure (en ne conservant qu'AppIndicator sous forme de pilule noire) et permet aux applications de s'étendre sur tout l'écran.</description>
     </key>
   </schema>
 </schemalist>
