@@ -302,6 +302,19 @@ export class ArreraTopBar {
             }
         );
 
+        // Initialisation de la liaison avec le moteur AppIndicator
+        this._appIndicatorSettings = null;
+        try {
+            const schemaSource = Gio.SettingsSchemaSource.get_default();
+            if (schemaSource?.lookup('org.gnome.shell.extensions.appindicator', true)) {
+                this._appIndicatorSettings = new Gio.Settings({
+                    schema_id: 'org.gnome.shell.extensions.appindicator',
+                });
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Schéma appindicator introuvable: ${e}`);
+        }
+
         this._enableActivitiesButton();
 
         if (this._settings) {
@@ -309,12 +322,57 @@ export class ArreraTopBar {
                 this._settings.connect('changed::launch-custom-app', () => this._updateNativeActivitiesVisibility()),
                 this._settings.connect('changed::keep-activities-button', () => this._updateNativeActivitiesVisibility()),
                 this._settings.connect('changed::theme', () => this._applyTheme()),
-                this._settings.connect('changed::invisible-elements-color', () => this._applyTheme())
+                this._settings.connect('changed::invisible-elements-color', () => this._applyTheme()),
+                this._settings.connect('changed::appindicator-position', () => this._applyAppIndicatorPosition())
             );
         }
 
+        this._ensureAppIndicatorExtensionEnabled();
         this._updateNativeActivitiesVisibility();
         this._applyTheme();
+        this._applyAppIndicatorPosition();
+    }
+
+    _ensureAppIndicatorExtensionEnabled() {
+        try {
+            const shellSettings = new Gio.Settings({ schema_id: 'org.gnome.shell' });
+            if (shellSettings.settings_schema?.has_key('enabled-extensions')) {
+                const enabledExtensions = shellSettings.get_strv('enabled-extensions');
+                const appIndicatorUuid = 'appindicatorsupport@rgcjonas.gmail.com';
+                if (!enabledExtensions.includes(appIndicatorUuid)) {
+                    const extPath = `/usr/share/gnome-shell/extensions/${appIndicatorUuid}`;
+                    const file = Gio.File.new_for_path(extPath);
+                    if (file.query_exists(null)) {
+                        enabledExtensions.push(appIndicatorUuid);
+                        shellSettings.set_strv('enabled-extensions', enabledExtensions);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de l'activation de l'extension appindicator: ${e}`);
+        }
+    }
+
+    _getAppIndicatorPosition() {
+        try {
+            if (this._settings?.settings_schema?.has_key('appindicator-position'))
+                return this._settings.get_string('appindicator-position');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de appindicator-position: ${e}`);
+        }
+        return 'left';
+    }
+
+    _applyAppIndicatorPosition() {
+        const pos = this._getAppIndicatorPosition();
+        if (this._appIndicatorSettings?.settings_schema?.has_key('tray-pos')) {
+            try {
+                if (this._appIndicatorSettings.get_string('tray-pos') !== pos)
+                    this._appIndicatorSettings.set_string('tray-pos', pos);
+            } catch (e) {
+                console.warn(`[ArreraTopBar] Erreur lors de la mise à jour de tray-pos: ${e}`);
+            }
+        }
     }
 
     _enableActivitiesButton() {
@@ -502,6 +560,7 @@ export class ArreraTopBar {
 
         this._bgSettings = null;
         this._interfaceSettings = null;
+        this._appIndicatorSettings = null;
         this._settings = null;
     }
 }

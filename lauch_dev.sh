@@ -13,7 +13,7 @@ fi
 # S'assurer que le mode sans échec de GNOME Shell est levé et les extensions activées
 rm -f "/run/user/$(id -u)/gnome-shell-disable-extensions"
 gsettings set org.gnome.shell disable-user-extensions false
-gsettings set org.gnome.shell enabled-extensions "['dock@linux.arrera-software.fr', 'app-menu@linux.arrera-software.fr', 'top-bar@linux.arrera-software.fr']"
+gsettings set org.gnome.shell enabled-extensions "['appindicatorsupport@rgcjonas.gmail.com', 'dock@linux.arrera-software.fr', 'app-menu@linux.arrera-software.fr', 'top-bar@linux.arrera-software.fr']"
 
 # Lancer la session de test GNOME Shell
 dbus-run-session -- gnome-shell --devkit

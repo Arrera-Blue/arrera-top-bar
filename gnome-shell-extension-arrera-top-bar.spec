@@ -14,6 +14,7 @@ BuildArch:      noarch
 BuildRequires:  glib2-devel
 Requires:       gnome-shell >= 45
 Requires:       glib2
+Requires:       gnome-shell-extension-appindicator
 
 Provides:       arrera-top-bar = %{version}-%{release}
 Provides:       gnome-shell-extension-top-bar = %{version}-%{release}

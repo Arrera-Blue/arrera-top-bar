@@ -47,5 +47,14 @@
       <summary>Couleur des éléments en mode invisible</summary>
       <description>Définit la couleur des textes, icônes et indicateurs lorsque le thème invisible est actif : 'auto' (adaptation automatique selon le fond d'écran), 'white' (forcé en blanc) ou 'black' (forcé en noir).</description>
     </key>
+    <key name="appindicator-position" type="s">
+      <choices>
+        <choice value="left"/>
+        <choice value="right"/>
+      </choices>
+      <default>'left'</default>
+      <summary>Position des indicateurs d'applications (AppIndicator)</summary>
+      <description>Définit l'emplacement des icônes de la zone de notification (AppIndicator) dans la barre supérieure : 'left' (à gauche, par défaut) ou 'right' (à droite).</description>
+    </key>
   </schema>
 </schemalist>

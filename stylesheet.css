@@ -147,3 +147,32 @@
 #panel.topbar-theme-tinted-light .workspace-dot:active {
     background-color: #000000;
 }
+
+/* ==========================================================================
+   Zone AppIndicator (Tray d'applications)
+   ========================================================================== */
+
+.panel-button.appindicator-status-icon,
+.panel-button .appindicator-box {
+    padding: 0 4px;
+}
+
+.appindicator-icon {
+    icon-size: 18px;
+}
+
+/* Thème invisible : contraste des icônes AppIndicator */
+#panel.topbar-theme-invisible.invisible-dark-elements .appindicator-icon {
+    color: #1a1a1a;
+    icon-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+#panel.topbar-theme-invisible.invisible-light-elements .appindicator-icon {
+    color: #ffffff;
+    icon-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+}
+
+/* Thème Tinté Clair : contraste des icônes AppIndicator */
+#panel.topbar-theme-tinted-light .appindicator-icon {
+    color: #1a1a1a;
+}
