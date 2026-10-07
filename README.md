@@ -12,10 +12,8 @@ top-bar@linux.arrera-software.fr/
 ├── metadata.json          # Métadonnées GNOME Shell (UUID, versions compatibles, schéma)
 ├── extension.js           # Point d'entrée de l'extension (cycle de vie enable / disable)
 ├── topBar.js              # Contrôleur principal et gestionnaire des éléments de la barre
-├── prefs.js               # Fenêtre de préférences Libadwaita (Adw.PreferencesWindow)
 ├── stylesheet.css         # Styles CSS personnalisés pour le panel et les widgets
 ├── icone/                 # Ressources graphiques et icônes (logo Arrera Blue)
-│   └── arrera-logo.svg
 ├── schemas/               # Définitions GSettings
 │   └── org.gnome.shell.extensions.top-bar.gschema.xml
 ├── compile_schemas.sh     # Script de compilation des schémas GSettings
@@ -42,11 +40,7 @@ Pour lancer une session GNOME Shell isolée (nested / devkit) sans redémarrer v
 ```
 
 ### 3. Configurer l'extension
-Vous pouvez configurer les options soit via l'interface graphique :
-```bash
-gnome-extensions prefs top-bar@linux.arrera-software.fr
-```
-Ou directement dans le terminal avec le script interactif :
+Configurez les options directement dans le terminal avec le script interactif :
 ```bash
 ./settings.sh
 ```
@@ -63,7 +57,7 @@ Ou directement dans le terminal avec le script interactif :
   - `launch-custom-app` : Active le lancement direct d'une application au lieu d'ouvrir les Activités (`false` par défaut).
   - `custom-app-id` : Identifiant `.desktop` (ex: `ptyxis`, `org.gnome.Nautilus.desktop`) ou commande à exécuter.
   - `keep-activities-button` : Affiche le bouton natif Activités de GNOME (indicateur d'espaces de travail) à droite du logo Arrera Blue pour conserver l'accès à l'Overview (`false` par défaut).
-- Configurable via `gnome-extensions prefs top-bar@linux.arrera-software.fr` ou `./settings.sh`.
+- Configurable via `./settings.sh` ou en ligne de commande avec `gsettings`.
 
 ---
 

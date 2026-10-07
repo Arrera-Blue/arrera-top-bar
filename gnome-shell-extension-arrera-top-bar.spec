@@ -36,7 +36,6 @@ install -d -m 0755 %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/schema
 install -p -m 0644 metadata.json %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 install -p -m 0644 extension.js %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 install -p -m 0644 topBar.js %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
-install -p -m 0644 prefs.js %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 install -p -m 0644 stylesheet.css %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 
 install -d -m 0755 %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/icone

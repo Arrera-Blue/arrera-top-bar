@@ -26,10 +26,9 @@ Ce document sert de guide de référence complet et autonome pour tout agent d'I
 ```text
 .
 ├── extension.js                    # Point d'entrée de l'extension (cycle de vie enable/disable)
-├── topBar.js                       # Contrôleur principal de la barre supérieure (ArreraTopBar, ArreraIndicator)
-├── prefs.js                        # Fenêtre graphique de préférences Libadwaita (Adw.PreferencesWindow)
+├── topBar.js                       # Contrôleur principal de la barre supérieure (ArreraTopBar)
 ├── stylesheet.css                  # Feuilles de style Clutter/St (styles transparent, flottant, pilule)
-├── icone/                          # Ressources graphiques (logo Arrera Blue)
+├── icone/                          # Ressources graphiques (logos Arrera Blue)
 │   └── arrera-logo.svg
 ├── metadata.json                   # Métadonnées déclaratives de l'extension pour GNOME Shell (UUID, versions 45-50)
 ├── agent.md                        # Guide d'architecture et de référence pour agents d'IA
@@ -74,14 +73,6 @@ Gère la personnalisation de la barre supérieure et le remplacement propre du b
   * Déconnecte tous les signaux GSettings via `_settings.disconnect(id)`.
   * Retire toutes les classes CSS personnalisées injectées dans `Main.panel`.
 
-### `prefs.js` (Interface des préférences Libadwaita)
-* Hérite de `ExtensionPreferences` (`resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js`).
-* Implémente `fillPreferencesWindow(window)` en utilisant les widgets modernes de Libadwaita :
-  * `Adw.PreferencesPage` : Page d'accueil avec icône de bureau.
-  * `Adw.PreferencesGroup` : Organisation en sections claires (*Apparence*, *Éléments de la barre*, *Comportement*).
-  * `Adw.ComboRow` : Sélection du mode visuel (défaut, transparent, flottant, pilule) via `Gtk.StringList`.
-  * `Adw.SwitchRow` : Interrupteurs booléens liés directement à GSettings via `settings.bind(...)`.
-
 ### `stylesheet.css` (Feuille de style GNOME Shell)
 * Cible l'acteur `#panel` et les classes appliquées par l'extension.
 * Règles de marges, de rayons de bordure (`border-radius`), de fonds translucides et d'ombres portées pour les modes flottants et pilules.
@@ -105,7 +96,7 @@ Le schéma est défini dans `schemas/org.gnome.shell.extensions.top-bar.gschema.
 
 ### Vérification de la syntaxe JavaScript (Node.js)
 ```bash
-node -c extension.js topBar.js prefs.js
+node -c extension.js topBar.js
 ```
 
 ### Recompilation des schémas GSettings
@@ -131,10 +122,6 @@ gsettings set org.gnome.shell.extensions.top-bar style-mode 'floating'
 gsettings set org.gnome.shell.extensions.top-bar show-activities-button false
 ```
 
-### Ouverture des préférences graphiques
-```bash
-gnome-extensions prefs top-bar@linux.arrera-software.fr
-```
 
 ### Génération du paquet RPM
 ```bash
