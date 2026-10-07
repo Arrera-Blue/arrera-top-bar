@@ -11,5 +11,20 @@
       <summary>Style de couleur du logo Arrera</summary>
       <description>Définit le style de couleur du logo Arrera : 'colored' (suit l'accentuation de GNOME), 'white' ou 'black'.</description>
     </key>
+    <key name="launch-custom-app" type="b">
+      <default>false</default>
+      <summary>Lancer une application au clic</summary>
+      <description>Si activé, le clic sur le logo Arrera lance l'application spécifiée au lieu d'ouvrir les activités.</description>
+    </key>
+    <key name="custom-app-id" type="s">
+      <default>''</default>
+      <summary>Application personnalisée à lancer</summary>
+      <description>Identifiant de l'application (.desktop) ou commande à lancer lors du clic sur le logo Arrera.</description>
+    </key>
+    <key name="keep-activities-button" type="b">
+      <default>false</default>
+      <summary>Conserver le bouton Activités de GNOME</summary>
+      <description>Si activé et que le lancement d'application personnalisée est actif, affiche le bouton natif Activités de GNOME à droite du logo Arrera.</description>
+    </key>
   </schema>
 </schemalist>

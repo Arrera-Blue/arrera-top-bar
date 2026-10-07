@@ -10,6 +10,7 @@ import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
+import Shell from 'gi://Shell';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
@@ -61,11 +62,14 @@ class ArreraActivitiesButton extends PanelMenu.Button {
 
         this._updateLogoIcon();
 
-        // Geste de clic pour basculer l'Overview
+        // Geste de clic pour basculer l'Overview ou lancer une application
         this._clickGesture = new Clutter.ClickGesture();
         this._clickGesture.connect('recognize', () => {
-            if (Main.overview.shouldToggleByCornerOrButton?.() ?? true)
+            if (this._shouldLaunchCustomApp()) {
+                this._launchCustomApp();
+            } else if (Main.overview.shouldToggleByCornerOrButton?.() ?? true) {
                 Main.overview.toggle();
+            }
         });
         this.add_action(this._clickGesture);
 
@@ -187,10 +191,66 @@ class ArreraActivitiesButton extends PanelMenu.Button {
         return Main.wm.handleWorkspaceScroll(event);
     }
 
+    _shouldLaunchCustomApp() {
+        if (!this._settings?.settings_schema?.has_key('launch-custom-app'))
+            return false;
+        if (!this._settings.get_boolean('launch-custom-app'))
+            return false;
+        const appId = this._getCustomAppId();
+        return appId.trim().length > 0;
+    }
+
+    _getCustomAppId() {
+        try {
+            if (this._settings?.settings_schema?.has_key('custom-app-id'))
+                return this._settings.get_string('custom-app-id');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de custom-app-id: ${e}`);
+        }
+        return '';
+    }
+
+    _launchCustomApp() {
+        const appId = this._getCustomAppId().trim();
+        if (!appId)
+            return;
+
+        // Fermer l'Overview si elle est actuellement ouverte
+        if (Main.overview.visible)
+            Main.overview.hide();
+
+        const appSystem = Shell.AppSystem.get_default();
+        let app = appSystem?.lookup_app(appId);
+        if (!app && !appId.endsWith('.desktop'))
+            app = appSystem?.lookup_app(`${appId}.desktop`);
+
+        if (app) {
+            try {
+                app.activate();
+                return;
+            } catch (err) {
+                console.warn(`[ArreraTopBar] Échec de l'activation via app.activate(), tentative de lancement: ${err}`);
+                app.get_app_info()?.launch([], null);
+                return;
+            }
+        }
+
+        // Lancement direct via Gio.AppInfo (commande ou exécutable)
+        try {
+            const appInfo = Gio.AppInfo.create_from_commandline(appId, null, Gio.AppInfoCreateFlags.NONE);
+            appInfo.launch([], null);
+        } catch (e) {
+            console.error(`[ArreraTopBar] Impossible de lancer "${appId}": ${e}`);
+        }
+    }
+
     vfunc_key_release_event(event) {
         const symbol = event.get_key_symbol();
         if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_space) {
-            if (Main.overview.shouldToggleByCornerOrButton?.() ?? true) {
+            if (this._shouldLaunchCustomApp()) {
+                this._launchCustomApp();
+                return Clutter.EVENT_STOP;
+            } else if (Main.overview.shouldToggleByCornerOrButton?.() ?? true) {
                 Main.overview.toggle();
                 return Clutter.EVENT_STOP;
             }
@@ -207,21 +267,42 @@ export class ArreraTopBar {
         this._extension = extension;
         this._settings = settings || extension?.getSettings?.();
         this._activitiesButton = null;
+        this._signalIds = [];
 
         this._enableActivitiesButton();
+
+        if (this._settings) {
+            this._signalIds.push(
+                this._settings.connect('changed::launch-custom-app', () => this._updateNativeActivitiesVisibility()),
+                this._settings.connect('changed::keep-activities-button', () => this._updateNativeActivitiesVisibility())
+            );
+        }
+
+        this._updateNativeActivitiesVisibility();
     }
 
     _enableActivitiesButton() {
-        const nativeActivities = Main.panel.statusArea.activities;
-
-        // Masquer le bouton Activités natif
-        if (nativeActivities?.container) {
-            nativeActivities.container.visible = false;
-        }
-
         // Créer et ajouter le bouton Arrera en première position (gauche)
         this._activitiesButton = new ArreraActivitiesButton(this._extension, this._settings);
         Main.panel.addToStatusArea(`${this._extension.uuid}-activities`, this._activitiesButton, 0, 'left');
+    }
+
+    _updateNativeActivitiesVisibility() {
+        const nativeActivities = Main.panel.statusArea.activities;
+        if (!nativeActivities?.container)
+            return;
+
+        const launchApp = this._settings?.get_boolean('launch-custom-app') ?? false;
+        const keepActivities = this._settings?.get_boolean('keep-activities-button') ?? false;
+
+        // Si le lancement personnalisé est désactivé, s'assurer que keep-activities-button est à false
+        if (!launchApp && keepActivities) {
+            this._settings?.set_boolean('keep-activities-button', false);
+        }
+
+        // Le bouton Activités natif de GNOME (indicateur d'espaces de travail) est affiché à droite du logo
+        // uniquement si le lancement personnalisé est actif ET que l'utilisateur a choisi de conserver le bouton.
+        nativeActivities.container.visible = launchApp && keepActivities;
     }
 
     destroy() {
@@ -231,9 +312,16 @@ export class ArreraTopBar {
             this._activitiesButton = null;
         }
 
-        // Rétablissement du bouton Activités natif
-        if (Main.panel.statusArea.activities) {
+        // Rétablissement inconditionnel du bouton Activités natif
+        if (Main.panel.statusArea.activities?.container) {
             Main.panel.statusArea.activities.container.visible = true;
+        }
+
+        // Déconnexion des signaux GSettings
+        if (this._settings && this._signalIds) {
+            for (const id of this._signalIds)
+                this._settings.disconnect(id);
+            this._signalIds = [];
         }
 
         this._settings = null;

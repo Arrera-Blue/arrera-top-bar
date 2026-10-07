@@ -59,6 +59,10 @@ Ou directement dans le terminal avec le script interactif :
   - `colored` *(par défaut)* : S'adapte dynamiquement à la couleur d'accentuation de GNOME (`org.gnome.desktop.interface accent-color`).
   - `white` : Affiche le logo en blanc.
   - `black` : Affiche le logo en noir.
+- **Lancement d'une application personnalisée au clic** :
+  - `launch-custom-app` : Active le lancement direct d'une application au lieu d'ouvrir les Activités (`false` par défaut).
+  - `custom-app-id` : Identifiant `.desktop` (ex: `ptyxis`, `org.gnome.Nautilus.desktop`) ou commande à exécuter.
+  - `keep-activities-button` : Affiche le bouton natif Activités de GNOME (indicateur d'espaces de travail) à droite du logo Arrera Blue pour conserver l'accès à l'Overview (`false` par défaut).
 - Configurable via `gnome-extensions prefs top-bar@linux.arrera-software.fr` ou `./settings.sh`.
 
 ---
