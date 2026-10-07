@@ -20,10 +20,11 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
  */
 export const ArreraActivitiesButton = GObject.registerClass(
 class ArreraActivitiesButton extends PanelMenu.Button {
-    _init(extension) {
+    _init(extension, settings = null) {
         super._init(0.0, 'Activities', true);
 
         this._extension = extension;
+        this._settings = settings || extension?.getSettings?.();
         this.set({
             name: 'panelArreraActivities',
             accessible_role: Atk.Role.TOGGLE_BUTTON,
@@ -33,25 +34,32 @@ class ArreraActivitiesButton extends PanelMenu.Button {
         this.add_style_class_name('panel-button');
         this.add_style_class_name('arrera-activities-button');
 
-        const logoFile = this._findLogoFile();
-        if (logoFile) {
-            this._icon = new St.Icon({
-                gicon: new Gio.FileIcon({ file: logoFile }),
-                style_class: 'system-status-icon arrera-activities-icon',
-                icon_size: 22,
-                y_align: Clutter.ActorAlign.CENTER,
-                x_align: Clutter.ActorAlign.CENTER,
-            });
-        } else {
-            this._icon = new St.Icon({
-                icon_name: 'view-activities-symbolic',
-                style_class: 'system-status-icon arrera-activities-icon',
-                icon_size: 22,
-                y_align: Clutter.ActorAlign.CENTER,
-                x_align: Clutter.ActorAlign.CENTER,
-            });
-        }
+        this._icon = new St.Icon({
+            style_class: 'system-status-icon arrera-activities-icon',
+            icon_size: 24,
+            y_align: Clutter.ActorAlign.CENTER,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
         this.add_child(this._icon);
+
+        // Écoute de la couleur d'accentuation native de GNOME (accent-color)
+        this._interfaceSettings = new Gio.Settings({
+            schema_id: 'org.gnome.desktop.interface',
+        });
+        this._accentColorSignalId = this._interfaceSettings.connect(
+            'changed::accent-color',
+            () => this._updateLogoIcon()
+        );
+
+        // Écoute du paramètre d'extension logo-color (colored, white, black)
+        if (this._settings) {
+            this._logoColorSignalId = this._settings.connect(
+                'changed::logo-color',
+                () => this._updateLogoIcon()
+            );
+        }
+
+        this._updateLogoIcon();
 
         // Geste de clic pour basculer l'Overview
         this._clickGesture = new Clutter.ClickGesture();
@@ -67,6 +75,39 @@ class ArreraActivitiesButton extends PanelMenu.Button {
             'hiding', () => this.remove_style_pseudo_class('checked'),
             this
         );
+
+        this.connect('destroy', () => this._onDestroy());
+    }
+
+    _getLogoColorMode() {
+        try {
+            if (this._settings?.settings_schema?.has_key('logo-color'))
+                return this._settings.get_string('logo-color');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de logo-color: ${e}`);
+        }
+        return 'colored';
+    }
+
+    _getAccentColor() {
+        try {
+            if (this._interfaceSettings?.settings_schema?.has_key('accent-color'))
+                return this._interfaceSettings.get_string('accent-color');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de accent-color: ${e}`);
+        }
+        return 'blue';
+    }
+
+    _updateLogoIcon() {
+        const logoFile = this._findLogoFile();
+        if (logoFile) {
+            this._icon.icon_name = null;
+            this._icon.gicon = new Gio.FileIcon({ file: logoFile });
+        } else {
+            this._icon.gicon = null;
+            this._icon.icon_name = 'view-activities-symbolic';
+        }
     }
 
     _findLogoFile() {
@@ -74,11 +115,36 @@ class ArreraActivitiesButton extends PanelMenu.Button {
         if (!extPath)
             return null;
 
+        const logoColorMode = this._getLogoColorMode();
+
+        let iconName;
+        if (logoColorMode === 'white') {
+            iconName = 'arrera-logo-white.svg';
+        } else if (logoColorMode === 'black') {
+            iconName = 'arrera-logo-black.svg';
+        } else {
+            // Mode 'colored' (par défaut) : suit la couleur d'accentuation de GNOME
+            const accentColor = this._getAccentColor();
+            const ACCENT_ICON_MAP = {
+                'blue': 'arrera-logo-blue.svg',
+                'teal': 'arrera-logo-turquoise.svg',
+                'turquoise': 'arrera-logo-turquoise.svg',
+                'green': 'arrera-logo-green.svg',
+                'yellow': 'arrera-logo-yellow.svg',
+                'orange': 'arrera-logo-orange.svg',
+                'red': 'arrera-logo-red.svg',
+                'pink': 'arrera-logo-pink.svg',
+                'purple': 'arrera-logo-purple.svg',
+                'slate': 'arrera-logo-slate.svg',
+            };
+            iconName = ACCENT_ICON_MAP[accentColor] || `arrera-logo-${accentColor}.svg`;
+        }
+
         const candidates = [
-            'icone/arrera-logo.svg',
-            'icone/arrera-logo.png',
-            'icons/arrera-logo.svg',
-            'icons/arrera-logo.png',
+            `icone/${iconName}`,
+            `icons/${iconName}`,
+            'icone/arrera-logo-blue.svg',
+            'icons/arrera-logo-blue.svg',
             'icone/logo.svg',
             'icons/logo.svg',
         ];
@@ -90,6 +156,31 @@ class ArreraActivitiesButton extends PanelMenu.Button {
         }
 
         return null;
+    }
+
+    _onDestroy() {
+        if (this._interfaceSettings) {
+            if (this._accentColorSignalId) {
+                this._interfaceSettings.disconnect(this._accentColorSignalId);
+                this._accentColorSignalId = null;
+            }
+            this._interfaceSettings = null;
+        }
+
+        if (this._settings) {
+            if (this._logoColorSignalId) {
+                this._settings.disconnect(this._logoColorSignalId);
+                this._logoColorSignalId = null;
+            }
+            this._settings = null;
+        }
+
+        Main.overview.disconnectObject?.(this);
+    }
+
+    destroy() {
+        this._onDestroy();
+        super.destroy();
     }
 
     vfunc_scroll_event(event) {
@@ -112,8 +203,9 @@ class ArreraActivitiesButton extends PanelMenu.Button {
  * Contrôleur principal de la Top Bar
  */
 export class ArreraTopBar {
-    constructor(extension) {
+    constructor(extension, settings = null) {
         this._extension = extension;
+        this._settings = settings || extension?.getSettings?.();
         this._activitiesButton = null;
 
         this._enableActivitiesButton();
@@ -128,7 +220,7 @@ export class ArreraTopBar {
         }
 
         // Créer et ajouter le bouton Arrera en première position (gauche)
-        this._activitiesButton = new ArreraActivitiesButton(this._extension);
+        this._activitiesButton = new ArreraActivitiesButton(this._extension, this._settings);
         Main.panel.addToStatusArea(`${this._extension.uuid}-activities`, this._activitiesButton, 0, 'left');
     }
 
@@ -143,5 +235,7 @@ export class ArreraTopBar {
         if (Main.panel.statusArea.activities) {
             Main.panel.statusArea.activities.container.visible = true;
         }
+
+        this._settings = null;
     }
 }

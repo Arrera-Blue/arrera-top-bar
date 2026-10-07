@@ -59,10 +59,11 @@ Ce document sert de guide de référence complet et autonome pour tout agent d'I
 Gère la personnalisation de la barre supérieure et le remplacement propre du bouton Activités :
 
 * **`ArreraActivitiesButton`** (`PanelMenu.Button`) :
-  * Bouton dédié intégrant l'icône SVG officielle Arrera Blue ([icone/arrera-logo.svg](file:///home/baptistep/.local/share/gnome-shell/extensions/top-bar@linux.arrera-software.fr/icone/arrera-logo.svg)).
+  * Bouton dédié intégrant l'icône SVG Arrera Blue adaptée à la couleur d'accentuation active de GNOME (`org.gnome.desktop.interface accent-color` : `blue`, `teal` -> turquoise, `green`, `yellow`, `orange`, `red`, `pink`, `purple`, `slate`).
   * Inséré à l'index `0` du conteneur gauche (`Main.panel.addToStatusArea(..., 0, 'left')`), à l'emplacement exact d'Activités.
   * Masque le conteneur natif (`Main.panel.statusArea.activities.container.visible = false`) pour éviter tout conflit de mise en page ou de points d'indicateurs de bureau.
   * Déclenche `Main.overview.toggle()` au clic et synchronise l'état pseudo-classe `checked` avec l'Overview.
+  * Écoute en continu le signal `changed::accent-color` de `org.gnome.desktop.interface` pour rafraîchir l'icône à chaud.
 * **Contrôle de `Main.panel`** :
   * Gère l'application dynamique des classes CSS selon la clé `style-mode` (`arrera-topbar-default`, `arrera-topbar-transparent`, `arrera-topbar-floating`, `arrera-topbar-pill`).
   * Pilote la visibilité des acteurs natifs de `Main.panel.statusArea` (`activities`, `dateMenu`, `quickSettings`).
@@ -89,8 +90,11 @@ Gère la personnalisation de la barre supérieure et le remplacement propre du b
 
 ## 4. Paramètres GSettings (`org.gnome.shell.extensions.top-bar`)
 
-Le schéma de base est initialisé dans `schemas/org.gnome.shell.extensions.top-bar.gschema.xml`.  
-Aucune clé de configuration n'est active pour le moment : l'extension applique directement le remplacement du bouton Activités par le logo Arrera Blue.
+Le schéma est défini dans `schemas/org.gnome.shell.extensions.top-bar.gschema.xml`.
+
+| Clé | Type | Défaut | Choix possibles | Description |
+| --- | --- | --- | --- | --- |
+| `logo-color` | `s` | `'colored'` | `'colored'`, `'white'`, `'black'` | Style de couleur du logo : coloré selon l'accentuation GNOME, blanc ou noir. |
 
 ---
 

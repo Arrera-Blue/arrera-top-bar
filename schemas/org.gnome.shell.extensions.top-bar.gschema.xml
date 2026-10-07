@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="top-bar">
   <schema id="org.gnome.shell.extensions.top-bar" path="/org/gnome/shell/extensions/top-bar/">
+    <key name="logo-color" type="s">
+      <choices>
+        <choice value="colored"/>
+        <choice value="white"/>
+        <choice value="black"/>
+      </choices>
+      <default>'colored'</default>
+      <summary>Style de couleur du logo Arrera</summary>
+      <description>Définit le style de couleur du logo Arrera : 'colored' (suit l'accentuation de GNOME), 'white' ou 'black'.</description>
+    </key>
   </schema>
 </schemalist>

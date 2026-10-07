@@ -53,8 +53,13 @@ Ou directement dans le terminal avec le script interactif :
 
 ---
 
-## ⚙️ Paramètres
-Aucun paramètre pour le moment. L'extension applique directement le remplacement du bouton Activités par le logo Arrera Blue.
+## ⚙️ Paramètres & Fonctionnalités
+- **Remplacement du bouton Activités** : Logo officiel Arrera Blue à la place du bouton natif.
+- **Paramètre GSettings `logo-color`** (`org.gnome.shell.extensions.top-bar`) :
+  - `colored` *(par défaut)* : S'adapte dynamiquement à la couleur d'accentuation de GNOME (`org.gnome.desktop.interface accent-color`).
+  - `white` : Affiche le logo en blanc.
+  - `black` : Affiche le logo en noir.
+- Configurable via `gnome-extensions prefs top-bar@linux.arrera-software.fr` ou `./settings.sh`.
 
 ---
 
