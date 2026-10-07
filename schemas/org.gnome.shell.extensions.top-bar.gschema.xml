@@ -1,48 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="top-bar">
   <schema id="org.gnome.shell.extensions.top-bar" path="/org/gnome/shell/extensions/top-bar/">
-    
-    <key name="autohide" type="b">
-      <default>false</default>
-      <summary>Masquage automatique</summary>
-      <description>Masque automatiquement la barre supérieure lorsqu'elle n'est pas survolée ou en présence d'une fenêtre.</description>
-    </key>
-
-    <key name="hide-in-fullscreen" type="b">
-      <default>true</default>
-      <summary>Masquer en plein écran</summary>
-      <description>Masque la barre supérieure lorsqu'une application est en mode plein écran.</description>
-    </key>
-
-    <key name="show-activities-button" type="b">
-      <default>true</default>
-      <summary>Afficher le bouton Activités</summary>
-      <description>Affiche ou masque le bouton Activités / Arrera dans la barre supérieure.</description>
-    </key>
-
-    <key name="show-date-menu" type="b">
-      <default>true</default>
-      <summary>Afficher l'horloge et la date</summary>
-      <description>Affiche ou masque l'horloge centrale et le calendrier.</description>
-    </key>
-
-    <key name="show-quick-settings" type="b">
-      <default>true</default>
-      <summary>Afficher les paramètres rapides</summary>
-      <description>Affiche ou masque le menu système et paramètres rapides à droite.</description>
-    </key>
-
-    <key name="style-mode" type="s">
-      <choices>
-        <choice value="default"/>
-        <choice value="transparent"/>
-        <choice value="floating"/>
-        <choice value="pill"/>
-      </choices>
-      <default>'default'</default>
-      <summary>Style de la barre supérieure</summary>
-      <description>Style visuel de la barre supérieure : default (standard), transparent, floating (flottante), ou pill (pilule compacte).</description>
-    </key>
-
   </schema>
 </schemalist>

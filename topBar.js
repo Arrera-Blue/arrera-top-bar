@@ -6,104 +6,142 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
+import Atk from 'gi://Atk';
+import Clutter from 'gi://Clutter';
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+
+/**
+ * Bouton personnalisé remplaçant le bouton Activités natif
+ * par le logo officiel Arrera Blue.
+ */
+export const ArreraActivitiesButton = GObject.registerClass(
+class ArreraActivitiesButton extends PanelMenu.Button {
+    _init(extension) {
+        super._init(0.0, 'Activities', true);
+
+        this._extension = extension;
+        this.set({
+            name: 'panelArreraActivities',
+            accessible_role: Atk.Role.TOGGLE_BUTTON,
+            accessible_name: 'Activities',
+        });
+
+        this.add_style_class_name('panel-button');
+        this.add_style_class_name('arrera-activities-button');
+
+        const logoFile = this._findLogoFile();
+        if (logoFile) {
+            this._icon = new St.Icon({
+                gicon: new Gio.FileIcon({ file: logoFile }),
+                style_class: 'system-status-icon arrera-activities-icon',
+                icon_size: 22,
+                y_align: Clutter.ActorAlign.CENTER,
+                x_align: Clutter.ActorAlign.CENTER,
+            });
+        } else {
+            this._icon = new St.Icon({
+                icon_name: 'view-activities-symbolic',
+                style_class: 'system-status-icon arrera-activities-icon',
+                icon_size: 22,
+                y_align: Clutter.ActorAlign.CENTER,
+                x_align: Clutter.ActorAlign.CENTER,
+            });
+        }
+        this.add_child(this._icon);
+
+        // Geste de clic pour basculer l'Overview
+        this._clickGesture = new Clutter.ClickGesture();
+        this._clickGesture.connect('recognize', () => {
+            if (Main.overview.shouldToggleByCornerOrButton?.() ?? true)
+                Main.overview.toggle();
+        });
+        this.add_action(this._clickGesture);
+
+        // Synchronisation visuelle avec l'état ouvert de l'Overview
+        Main.overview.connectObject(
+            'showing', () => this.add_style_pseudo_class('checked'),
+            'hiding', () => this.remove_style_pseudo_class('checked'),
+            this
+        );
+    }
+
+    _findLogoFile() {
+        const extPath = this._extension?.path;
+        if (!extPath)
+            return null;
+
+        const candidates = [
+            'icone/arrera-logo.svg',
+            'icone/arrera-logo.png',
+            'icons/arrera-logo.svg',
+            'icons/arrera-logo.png',
+            'icone/logo.svg',
+            'icons/logo.svg',
+        ];
+
+        for (const relPath of candidates) {
+            const file = Gio.File.new_for_path(`${extPath}/${relPath}`);
+            if (file.query_exists(null))
+                return file;
+        }
+
+        return null;
+    }
+
+    vfunc_scroll_event(event) {
+        return Main.wm.handleWorkspaceScroll(event);
+    }
+
+    vfunc_key_release_event(event) {
+        const symbol = event.get_key_symbol();
+        if (symbol === Clutter.KEY_Return || symbol === Clutter.KEY_space) {
+            if (Main.overview.shouldToggleByCornerOrButton?.() ?? true) {
+                Main.overview.toggle();
+                return Clutter.EVENT_STOP;
+            }
+        }
+        return Clutter.EVENT_PROPAGATE;
+    }
+});
 
 /**
  * Contrôleur principal de la Top Bar
- * Gère uniquement la personnalisation, l'apparence et l'état de la barre supérieure native.
  */
 export class ArreraTopBar {
     constructor(extension) {
         this._extension = extension;
-        this._settings = extension.getSettings();
-        this._signalIds = [];
+        this._activitiesButton = null;
 
-        this._applySettings();
-        this._bindSettings();
+        this._enableActivitiesButton();
     }
 
-    _bindSettings() {
-        const keys = [
-            'show-activities-button',
-            'show-date-menu',
-            'show-quick-settings',
-            'style-mode',
-        ];
+    _enableActivitiesButton() {
+        const nativeActivities = Main.panel.statusArea.activities;
 
-        for (const key of keys) {
-            const id = this._settings.connect(`changed::${key}`, () => {
-                this._applySettings();
-            });
-            this._signalIds.push(id);
-        }
-    }
-
-    _applySettings() {
-        // Gestion de la visibilité des composants natifs
-        const showActivities = this._settings.get_boolean('show-activities-button');
-        const showDate = this._settings.get_boolean('show-date-menu');
-        const showQuickSettings = this._settings.get_boolean('show-quick-settings');
-        const styleMode = this._settings.get_string('style-mode');
-
-        if (Main.panel.statusArea.activities) {
-            Main.panel.statusArea.activities.container.visible = showActivities;
+        // Masquer le bouton Activités natif
+        if (nativeActivities?.container) {
+            nativeActivities.container.visible = false;
         }
 
-        if (Main.panel.statusArea.dateMenu) {
-            Main.panel.statusArea.dateMenu.container.visible = showDate;
-        }
-
-        if (Main.panel.statusArea.quickSettings) {
-            Main.panel.statusArea.quickSettings.container.visible = showQuickSettings;
-        }
-
-        // Application des styles CSS sur Main.panel
-        this._applyStyleMode(styleMode);
-    }
-
-    _applyStyleMode(mode) {
-        const panel = Main.panel;
-        const styleClasses = [
-            'arrera-topbar-default',
-            'arrera-topbar-transparent',
-            'arrera-topbar-floating',
-            'arrera-topbar-pill',
-        ];
-
-        for (const cls of styleClasses) {
-            panel.remove_style_class_name(cls);
-        }
-
-        panel.add_style_class_name(`arrera-topbar-${mode}`);
+        // Créer et ajouter le bouton Arrera en première position (gauche)
+        this._activitiesButton = new ArreraActivitiesButton(this._extension);
+        Main.panel.addToStatusArea(`${this._extension.uuid}-activities`, this._activitiesButton, 0, 'left');
     }
 
     destroy() {
-        // Déconnexion des signaux GSettings
-        for (const id of this._signalIds) {
-            this._settings.disconnect(id);
+        // Supprimer le bouton Arrera
+        if (this._activitiesButton) {
+            this._activitiesButton.destroy();
+            this._activitiesButton = null;
         }
-        this._signalIds = [];
 
-        // Rétablissement de la visibilité d'origine des composants natifs
-        if (Main.panel.statusArea.activities)
+        // Rétablissement du bouton Activités natif
+        if (Main.panel.statusArea.activities) {
             Main.panel.statusArea.activities.container.visible = true;
-
-        if (Main.panel.statusArea.dateMenu)
-            Main.panel.statusArea.dateMenu.container.visible = true;
-
-        if (Main.panel.statusArea.quickSettings)
-            Main.panel.statusArea.quickSettings.container.visible = true;
-
-        // Nettoyage des styles CSS ajoutés sur Main.panel
-        const panel = Main.panel;
-        const styleClasses = [
-            'arrera-topbar-default',
-            'arrera-topbar-transparent',
-            'arrera-topbar-floating',
-            'arrera-topbar-pill',
-        ];
-        for (const cls of styleClasses) {
-            panel.remove_style_class_name(cls);
         }
     }
 }

@@ -11,7 +11,6 @@ import { ArreraTopBar } from './topBar.js';
 
 export default class ArreraTopBarExtension extends Extension {
     enable() {
-        this._settings = this.getSettings();
         this._topBar = new ArreraTopBar(this);
     }
 
@@ -20,7 +19,5 @@ export default class ArreraTopBarExtension extends Extension {
             this._topBar.destroy();
             this._topBar = null;
         }
-
-        this._settings = null;
     }
 }

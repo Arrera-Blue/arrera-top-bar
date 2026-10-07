@@ -14,6 +14,8 @@ top-bar@linux.arrera-software.fr/
 ├── topBar.js              # Contrôleur principal et gestionnaire des éléments de la barre
 ├── prefs.js               # Fenêtre de préférences Libadwaita (Adw.PreferencesWindow)
 ├── stylesheet.css         # Styles CSS personnalisés pour le panel et les widgets
+├── icone/                 # Ressources graphiques et icônes (logo Arrera Blue)
+│   └── arrera-logo.svg
 ├── schemas/               # Définitions GSettings
 │   └── org.gnome.shell.extensions.top-bar.gschema.xml
 ├── compile_schemas.sh     # Script de compilation des schémas GSettings
@@ -51,16 +53,8 @@ Ou directement dans le terminal avec le script interactif :
 
 ---
 
-## ⚙️ Paramètres disponibles (GSettings)
-
-| Clé | Type | Défaut | Description |
-|---|---|---|---|
-| `style-mode` | String | `'default'` | Style visuel : `default`, `transparent`, `floating`, `pill` |
-| `show-activities-button` | Boolean | `true` | Afficher / masquer le bouton Activités |
-| `show-date-menu` | Boolean | `true` | Afficher / masquer l'horloge et la date |
-| `show-quick-settings` | Boolean | `true` | Afficher / masquer le menu de paramètres rapides |
-| `autohide` | Boolean | `false` | Masquer automatiquement la barre |
-| `hide-in-fullscreen` | Boolean | `true` | Masquer la barre en mode plein écran |
+## ⚙️ Paramètres
+Aucun paramètre pour le moment. L'extension applique directement le remplacement du bouton Activités par le logo Arrera Blue.
 
 ---
 

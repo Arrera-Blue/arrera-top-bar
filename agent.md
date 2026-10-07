@@ -29,6 +29,8 @@ Ce document sert de guide de référence complet et autonome pour tout agent d'I
 ├── topBar.js                       # Contrôleur principal de la barre supérieure (ArreraTopBar, ArreraIndicator)
 ├── prefs.js                        # Fenêtre graphique de préférences Libadwaita (Adw.PreferencesWindow)
 ├── stylesheet.css                  # Feuilles de style Clutter/St (styles transparent, flottant, pilule)
+├── icone/                          # Ressources graphiques (logo Arrera Blue)
+│   └── arrera-logo.svg
 ├── metadata.json                   # Métadonnées déclaratives de l'extension pour GNOME Shell (UUID, versions 45-50)
 ├── agent.md                        # Guide d'architecture et de référence pour agents d'IA
 ├── README.md                       # Documentation générale du projet
@@ -54,19 +56,21 @@ Ce document sert de guide de référence complet et autonome pour tout agent d'I
   * `disable()` : Appelle `this._topBar.destroy()`, nettoie les références, supprime `globalThis.arreraTopBar` et remet `this._settings` à `null`.
 
 ### `topBar.js` (Contrôleur de la barre supérieure)
-Gère exclusivement la personnalisation et le comportement du panneau natif `Main.panel` (sans ajouter d'éléments parasites) :
+Gère la personnalisation de la barre supérieure et le remplacement propre du bouton Activités :
 
+* **`ArreraActivitiesButton`** (`PanelMenu.Button`) :
+  * Bouton dédié intégrant l'icône SVG officielle Arrera Blue ([icone/arrera-logo.svg](file:///home/baptistep/.local/share/gnome-shell/extensions/top-bar@linux.arrera-software.fr/icone/arrera-logo.svg)).
+  * Inséré à l'index `0` du conteneur gauche (`Main.panel.addToStatusArea(..., 0, 'left')`), à l'emplacement exact d'Activités.
+  * Masque le conteneur natif (`Main.panel.statusArea.activities.container.visible = false`) pour éviter tout conflit de mise en page ou de points d'indicateurs de bureau.
+  * Déclenche `Main.overview.toggle()` au clic et synchronise l'état pseudo-classe `checked` avec l'Overview.
 * **Contrôle de `Main.panel`** :
   * Gère l'application dynamique des classes CSS selon la clé `style-mode` (`arrera-topbar-default`, `arrera-topbar-transparent`, `arrera-topbar-floating`, `arrera-topbar-pill`).
-  * Pilote la visibilité des acteurs natifs de `Main.panel.statusArea` :
-    * `Main.panel.statusArea.activities.container.visible`
-    * `Main.panel.statusArea.dateMenu.container.visible`
-    * `Main.panel.statusArea.quickSettings.container.visible`
+  * Pilote la visibilité des acteurs natifs de `Main.panel.statusArea` (`activities`, `dateMenu`, `quickSettings`).
 * **Écoute GSettings** :
   * Enregistre les gestionnaires d'événements `changed::...` sur `_settings` et conserve leurs identifiants dans `_signalIds`.
 * **Méthode `destroy()`** :
+  * Détruit `ArreraActivitiesButton` et rétablit impérativement la visibilité native (`visible = true`) du bouton Activités d'origine.
   * Déconnecte tous les signaux GSettings via `_settings.disconnect(id)`.
-  * Rétablit impérativement la visibilité native (`visible = true`) de tous les acteurs touchés.
   * Retire toutes les classes CSS personnalisées injectées dans `Main.panel`.
 
 ### `prefs.js` (Interface des préférences Libadwaita)
@@ -83,18 +87,10 @@ Gère exclusivement la personnalisation et le comportement du panneau natif `Mai
 
 ---
 
-## 4. Schéma GSettings (`org.gnome.shell.extensions.top-bar`)
+## 4. Paramètres GSettings (`org.gnome.shell.extensions.top-bar`)
 
-Le schéma est défini dans `schemas/org.gnome.shell.extensions.top-bar.gschema.xml` avec le chemin `/org/gnome/shell/extensions/top-bar/` :
-
-| Nom de la clé | Type | Valeur par défaut | Description |
-|---|---|---|---|
-| `style-mode` | String (`s`) | `'default'` | Style visuel : `'default'`, `'transparent'`, `'floating'`, `'pill'` |
-| `show-activities-button` | Booléen (`b`) | `true` | Afficher ou masquer le bouton Activités / Arrera |
-| `show-date-menu` | Booléen (`b`) | `true` | Afficher ou masquer l'horloge centrale et le calendrier |
-| `show-quick-settings` | Booléen (`b`) | `true` | Afficher ou masquer le menu de paramètres rapides à droite |
-| `autohide` | Booléen (`b`) | `false` | Masquer automatiquement la barre lorsqu'elle n'est pas survolée |
-| `hide-in-fullscreen` | Booléen (`b`) | `true` | Masquer la barre lorsqu'une fenêtre passe en plein écran |
+Le schéma de base est initialisé dans `schemas/org.gnome.shell.extensions.top-bar.gschema.xml`.  
+Aucune clé de configuration n'est active pour le moment : l'extension applique directement le remplacement du bouton Activités par le logo Arrera Blue.
 
 ---
 

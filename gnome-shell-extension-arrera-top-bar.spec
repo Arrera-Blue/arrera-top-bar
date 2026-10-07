@@ -39,6 +39,9 @@ install -p -m 0644 topBar.js %{buildroot}%{_datadir}/gnome-shell/extensions/%{uu
 install -p -m 0644 prefs.js %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 install -p -m 0644 stylesheet.css %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/
 
+install -d -m 0755 %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/icone
+install -p -m 0644 icone/* %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/icone/
+
 install -p -m 0644 schemas/org.gnome.shell.extensions.top-bar.gschema.xml %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/schemas/
 install -p -m 0644 schemas/gschemas.compiled %{buildroot}%{_datadir}/gnome-shell/extensions/%{uuid}/schemas/
 
