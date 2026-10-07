@@ -86,6 +86,8 @@ Le schéma est défini dans `schemas/org.gnome.shell.extensions.top-bar.gschema.
 | Clé | Type | Défaut | Choix possibles | Description |
 | --- | --- | --- | --- | --- |
 | `logo-color` | `s` | `'colored'` | `'colored'`, `'white'`, `'black'` | Style de couleur du logo : coloré selon l'accentuation GNOME, blanc ou noir. |
+| `theme` | `s` | `'vanilla'` | `'vanilla'`, `'invisible'`, `'tinted-dark'`, `'tinted-light'` | Thème de la barre supérieure (Vanilla, Invisible transparent, Tinté sombre ou Tinté clair). |
+| `invisible-elements-color` | `s` | `'auto'` | `'auto'`, `'white'`, `'black'` | Couleur des éléments en mode invisible (automatique selon le fond d'écran, blanc forcé ou noir forcé). |
 | `launch-custom-app` | `b` | `false` | `true`, `false` | Lance une application spécifique au lieu d'ouvrir les activités. |
 | `custom-app-id` | `s` | `''` | Identifiant ou commande | Identifiant de l'application (.desktop) ou commande à lancer au clic. |
 | `keep-activities-button` | `b` | `false` | `true`, `false` | Conserve et affiche le bouton natif Activités de GNOME à droite du logo Arrera si le lancement d'app est actif. |

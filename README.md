@@ -47,7 +47,15 @@ Configurez les options directement dans le terminal avec le script interactif :
 
 ---
 
-## ⚙️ Paramètres & Fonctionnalités
+- **Thèmes de la barre supérieure (`theme`)** :
+  - `vanilla` *(par défaut)* : Conserve le style et l'apparence native de GNOME Shell.
+  - `invisible` : Désactive le fond noir de la barre (panneau transparent) tout en maintenant visibles l'horloge, les paramètres rapides, le logo Arrera et le bouton Activités.
+  - `tinted-dark` : Fond sombre teinté translucide moderne.
+  - `tinted-light` : Fond clair teinté translucide avec contraste automatique du texte, des icônes et des indicateurs d'espaces de travail.
+- **Couleur des éléments en mode invisible (`invisible-elements-color`)** :
+  - `auto` *(par défaut)* : Détecte automatiquement la luminosité de la bande supérieure du fond d'écran pour adapter la couleur des textes, icônes et boutons (sombre sur fond clair, clair sur fond sombre).
+  - `white` : Force les éléments en blanc avec une ombre protectrice de sécurité.
+  - `black` : Force les éléments en noir.
 - **Remplacement du bouton Activités** : Logo officiel Arrera Blue à la place du bouton natif.
 - **Paramètre GSettings `logo-color`** (`org.gnome.shell.extensions.top-bar`) :
   - `colored` *(par défaut)* : S'adapte dynamiquement à la couleur d'accentuation de GNOME (`org.gnome.desktop.interface accent-color`).

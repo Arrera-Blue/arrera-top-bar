@@ -8,6 +8,7 @@
 
 import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
+import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Shell from 'gi://Shell';
@@ -259,6 +260,14 @@ class ArreraActivitiesButton extends PanelMenu.Button {
     }
 });
 
+const THEME_CLASSES = [
+    'topbar-theme-invisible',
+    'topbar-theme-tinted-dark',
+    'topbar-theme-tinted-light',
+    'invisible-dark-elements',
+    'invisible-light-elements',
+];
+
 /**
  * Contrôleur principal de la Top Bar
  */
@@ -268,23 +277,173 @@ export class ArreraTopBar {
         this._settings = settings || extension?.getSettings?.();
         this._activitiesButton = null;
         this._signalIds = [];
+        this._externalSignals = [];
+
+        // Écoute des réglages de fond d'écran et d'apparence GNOME
+        this._bgSettings = new Gio.Settings({
+            schema_id: 'org.gnome.desktop.background',
+        });
+        this._interfaceSettings = new Gio.Settings({
+            schema_id: 'org.gnome.desktop.interface',
+        });
+
+        this._externalSignals.push(
+            {
+                settings: this._bgSettings,
+                id: this._bgSettings.connect('changed::picture-uri', () => this._onWallpaperChanged()),
+            },
+            {
+                settings: this._bgSettings,
+                id: this._bgSettings.connect('changed::picture-uri-dark', () => this._onWallpaperChanged()),
+            },
+            {
+                settings: this._interfaceSettings,
+                id: this._interfaceSettings.connect('changed::color-scheme', () => this._onWallpaperChanged()),
+            }
+        );
 
         this._enableActivitiesButton();
 
         if (this._settings) {
             this._signalIds.push(
                 this._settings.connect('changed::launch-custom-app', () => this._updateNativeActivitiesVisibility()),
-                this._settings.connect('changed::keep-activities-button', () => this._updateNativeActivitiesVisibility())
+                this._settings.connect('changed::keep-activities-button', () => this._updateNativeActivitiesVisibility()),
+                this._settings.connect('changed::theme', () => this._applyTheme()),
+                this._settings.connect('changed::invisible-elements-color', () => this._applyTheme())
             );
         }
 
         this._updateNativeActivitiesVisibility();
+        this._applyTheme();
     }
 
     _enableActivitiesButton() {
         // Créer et ajouter le bouton Arrera en première position (gauche)
         this._activitiesButton = new ArreraActivitiesButton(this._extension, this._settings);
         Main.panel.addToStatusArea(`${this._extension.uuid}-activities`, this._activitiesButton, 0, 'left');
+    }
+
+    _onWallpaperChanged() {
+        if (this._getTheme() === 'invisible') {
+            this._applyTheme();
+        }
+    }
+
+    _detectWallpaperBrightness() {
+        try {
+            if (!this._bgSettings)
+                return 'white';
+
+            const isDark = (this._interfaceSettings?.get_string('color-scheme') === 'prefer-dark');
+            let uri = isDark
+                ? this._bgSettings.get_string('picture-uri-dark')
+                : this._bgSettings.get_string('picture-uri');
+
+            if (!uri || uri.trim() === '')
+                uri = this._bgSettings.get_string('picture-uri');
+
+            if (!uri || !uri.startsWith('file://'))
+                return 'white';
+
+            const file = Gio.File.new_for_uri(uri);
+            const path = file.get_path();
+            if (!path || !file.query_exists(null))
+                return 'white';
+
+            // Charge uniquement une vignette ultra-légère (64x16) pour analyser la barre supérieure
+            const pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 64, 16, false);
+            if (!pixbuf)
+                return 'white';
+
+            const pixels = pixbuf.get_pixels();
+            const nChannels = pixbuf.get_n_channels();
+            const rowstride = pixbuf.get_rowstride();
+            const width = pixbuf.get_width();
+            const height = pixbuf.get_height();
+
+            let totalLuminance = 0;
+            let count = 0;
+
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const offset = y * rowstride + x * nChannels;
+                    const r = pixels[offset];
+                    const g = pixels[offset + 1];
+                    const b = pixels[offset + 2];
+                    totalLuminance += 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    count++;
+                }
+            }
+
+            if (count === 0)
+                return 'white';
+
+            const avgLuminance = totalLuminance / count;
+            // Si la moyenne est claire (>= 130 sur 255), on privilégie des éléments noirs
+            return avgLuminance >= 130 ? 'black' : 'white';
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la détection de luminosité du fond d'écran: ${e}`);
+            return 'white';
+        }
+    }
+
+    _getInvisibleElementsColor() {
+        try {
+            if (this._settings?.settings_schema?.has_key('invisible-elements-color')) {
+                const mode = this._settings.get_string('invisible-elements-color');
+                if (mode === 'black' || mode === 'white')
+                    return mode;
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de invisible-elements-color: ${e}`);
+        }
+        return this._detectWallpaperBrightness();
+    }
+
+    _getTheme() {
+        try {
+            if (this._settings?.settings_schema?.has_key('theme'))
+                return this._settings.get_string('theme');
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur lors de la lecture de theme: ${e}`);
+        }
+        return 'vanilla';
+    }
+
+    _applyTheme() {
+        const panel = Main.panel;
+        if (!panel)
+            return;
+
+        // Nettoyer les classes de thème existantes
+        for (const cls of THEME_CLASSES) {
+            if (panel.has_style_class_name(cls))
+                panel.remove_style_class_name(cls);
+        }
+
+        const currentTheme = this._getTheme();
+        switch (currentTheme) {
+            case 'invisible': {
+                panel.add_style_class_name('topbar-theme-invisible');
+                const elementsColor = this._getInvisibleElementsColor();
+                if (elementsColor === 'black') {
+                    panel.add_style_class_name('invisible-dark-elements');
+                } else {
+                    panel.add_style_class_name('invisible-light-elements');
+                }
+                break;
+            }
+            case 'tinted-dark':
+                panel.add_style_class_name('topbar-theme-tinted-dark');
+                break;
+            case 'tinted-light':
+                panel.add_style_class_name('topbar-theme-tinted-light');
+                break;
+            case 'vanilla':
+            default:
+                // Style par défaut de GNOME Shell
+                break;
+        }
     }
 
     _updateNativeActivitiesVisibility() {
@@ -317,13 +476,32 @@ export class ArreraTopBar {
             Main.panel.statusArea.activities.container.visible = true;
         }
 
-        // Déconnexion des signaux GSettings
+        // Rétablissement inconditionnel du style natif du panneau
+        if (Main.panel) {
+            for (const cls of THEME_CLASSES) {
+                if (Main.panel.has_style_class_name(cls))
+                    Main.panel.remove_style_class_name(cls);
+            }
+        }
+
+        // Déconnexion des signaux GSettings internes
         if (this._settings && this._signalIds) {
             for (const id of this._signalIds)
                 this._settings.disconnect(id);
             this._signalIds = [];
         }
 
+        // Déconnexion des signaux système (fond d'écran, interface)
+        if (this._externalSignals) {
+            for (const { settings, id } of this._externalSignals) {
+                if (settings && id)
+                    settings.disconnect(id);
+            }
+            this._externalSignals = [];
+        }
+
+        this._bgSettings = null;
+        this._interfaceSettings = null;
         this._settings = null;
     }
 }

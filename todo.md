@@ -1,3 +1,3 @@
-- [] Ajouter des theme a la bar (Vanilla,invisible,tinter(dark/light))
+- [x] Ajouter des theme a la bar (Vanilla,invisible,tinter(dark/light))
 - [] Ajouter la vu des application comme app indicator (Rendre bougable)
 - [] Possible de supprimer l'affichage de la bar totalement
