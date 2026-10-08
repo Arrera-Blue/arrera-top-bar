@@ -1026,7 +1026,7 @@ export class ArreraTopBar {
                 panel.statusArea.quickSettings.container.visible = false;
 
             const gpasteBtn = panel?.statusArea?.gpaste;
-            if (gpasteBtn)
+            if (gpasteBtn && this._isContainerOwnedByPanel(gpasteBtn.container))
                 gpasteBtn.add_style_class_name('gpaste-floating-pill');
 
             // 5. Si une fenêtre est maximisée ou en plein écran sur le moniteur, masquer la pilule AppIndicator
