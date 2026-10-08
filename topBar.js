@@ -10,6 +10,7 @@ import Atk from 'gi://Atk';
 import Clutter from 'gi://Clutter';
 import GdkPixbuf from 'gi://GdkPixbuf';
 import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
@@ -261,6 +262,260 @@ class ArreraActivitiesButton extends PanelMenu.Button {
     }
 });
 
+/**
+ * Carte Adwaita dédiée au Partage d'écran dans les Paramètres Rapides
+ */
+export const QuickSettingsScreenSharingCard = GObject.registerClass(
+class QuickSettingsScreenSharingCard extends St.Button {
+    _init() {
+        super._init({
+            style_class: 'quick-settings-indicator-card screen-sharing',
+            can_focus: true,
+            reactive: true,
+            x_expand: true,
+            visible: false,
+        });
+
+        const box = new St.BoxLayout({
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.set_child(box);
+
+        // Pastille icône orange à gauche
+        const iconBadge = new St.Bin({
+            style_class: 'quick-settings-indicator-icon-badge',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        iconBadge.set_child(new St.Icon({
+            icon_name: 'screen-shared-symbolic',
+            icon_size: 16,
+        }));
+        box.add_child(iconBadge);
+
+        // Textes explicatifs au centre
+        const textBox = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        box.add_child(textBox);
+
+        this._title = new St.Label({
+            style_class: 'quick-settings-indicator-title',
+            text: 'Partage d\'écran actif',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        textBox.add_child(this._title);
+
+        this._subtitle = new St.Label({
+            style_class: 'quick-settings-indicator-subtitle',
+            text: 'Diffusion de l\'écran en cours',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        textBox.add_child(this._subtitle);
+
+        // Bouton Arrêter à droite
+        this._stopBtn = new St.Button({
+            style_class: 'quick-settings-indicator-stop-btn',
+            can_focus: true,
+            reactive: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        const stopContent = new St.BoxLayout({
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        stopContent.add_child(new St.Label({
+            text: 'Arrêter',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        stopContent.add_child(new St.Icon({
+            icon_name: 'screencast-stop-symbolic',
+            icon_size: 13,
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._stopBtn.set_child(stopContent);
+        this._stopBtn.connect('clicked', () => this._stopSharing());
+        box.add_child(this._stopBtn);
+
+        this.connect('clicked', () => this._stopSharing());
+
+        this._sharingIndicator = Main.panel?.statusArea?.screenSharing;
+        this._signalId = null;
+        if (this._sharingIndicator) {
+            this._signalId = this._sharingIndicator.connect('notify::visible', () => this._sync());
+        }
+        this._sync();
+    }
+
+    _stopSharing() {
+        try {
+            if (this._sharingIndicator?._stopSharing)
+                this._sharingIndicator._stopSharing();
+            else if (typeof this._sharingIndicator?.activate === 'function')
+                this._sharingIndicator.activate();
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur arrêt partage: ${e}`);
+        }
+    }
+
+    _sync() {
+        const isVisible = this._sharingIndicator?.visible ?? false;
+        this.visible = isVisible;
+    }
+
+    destroy() {
+        if (this._signalId && this._sharingIndicator) {
+            try {
+                this._sharingIndicator.disconnect(this._signalId);
+            } catch (e) {}
+            this._signalId = null;
+        }
+        super.destroy();
+    }
+});
+
+/**
+ * Carte Adwaita dédiée à l'Enregistrement vidéo dans les Paramètres Rapides
+ */
+export const QuickSettingsScreenRecordingCard = GObject.registerClass(
+class QuickSettingsScreenRecordingCard extends St.Button {
+    _init() {
+        super._init({
+            style_class: 'quick-settings-indicator-card screen-recording',
+            can_focus: true,
+            reactive: true,
+            x_expand: true,
+            visible: false,
+        });
+
+        this._secondsPassed = 0;
+        this._timerId = 0;
+
+        const box = new St.BoxLayout({
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        this.set_child(box);
+
+        // Pastille icône rouge à gauche
+        const iconBadge = new St.Bin({
+            style_class: 'quick-settings-indicator-icon-badge',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        iconBadge.set_child(new St.Icon({
+            icon_name: 'media-record-symbolic',
+            icon_size: 16,
+        }));
+        box.add_child(iconBadge);
+
+        // Textes explicatifs au centre
+        const textBox = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        box.add_child(textBox);
+
+        this._title = new St.Label({
+            style_class: 'quick-settings-indicator-title',
+            text: 'Enregistrement vidéo',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        textBox.add_child(this._title);
+
+        this._subtitle = new St.Label({
+            style_class: 'quick-settings-indicator-subtitle',
+            text: '0:00 - Enregistrement en cours',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        textBox.add_child(this._subtitle);
+
+        // Bouton Arrêter à droite
+        this._stopBtn = new St.Button({
+            style_class: 'quick-settings-indicator-stop-btn',
+            can_focus: true,
+            reactive: true,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        const stopContent = new St.BoxLayout({
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        stopContent.add_child(new St.Label({
+            text: 'Arrêter',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        stopContent.add_child(new St.Icon({
+            icon_name: 'screencast-stop-symbolic',
+            icon_size: 13,
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._stopBtn.set_child(stopContent);
+        this._stopBtn.connect('clicked', () => this._stopRecording());
+        box.add_child(this._stopBtn);
+
+        this.connect('clicked', () => this._stopRecording());
+
+        this._notifyId = Main.screenshotUI.connect(
+            'notify::screencast-in-progress',
+            () => this._sync()
+        );
+        this._sync();
+    }
+
+    _updateTimer() {
+        const mins = Math.floor(this._secondsPassed / 60);
+        const secs = this._secondsPassed % 60;
+        const formatted = `${mins}:${secs.toString().padStart(2, '0')}`;
+        this._subtitle.text = `${formatted} - Enregistrement en cours`;
+    }
+
+    _stopRecording() {
+        try {
+            Main.screenshotUI?.stopScreencast?.();
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur arrêt screencast: ${e}`);
+        }
+    }
+
+    _sync() {
+        const inProgress = Main.screenshotUI?.screencast_in_progress ?? false;
+        this.visible = inProgress;
+
+        if (inProgress) {
+            if (!this._timerId) {
+                this._secondsPassed = 0;
+                this._updateTimer();
+                this._timerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+                    this._secondsPassed++;
+                    this._updateTimer();
+                    return GLib.SOURCE_CONTINUE;
+                });
+            }
+        } else {
+            if (this._timerId) {
+                GLib.source_remove(this._timerId);
+                this._timerId = 0;
+            }
+            this._secondsPassed = 0;
+        }
+    }
+
+    destroy() {
+        if (this._timerId) {
+            GLib.source_remove(this._timerId);
+            this._timerId = 0;
+        }
+        if (this._notifyId) {
+            try {
+                Main.screenshotUI.disconnect(this._notifyId);
+            } catch (e) {}
+            this._notifyId = null;
+        }
+        super.destroy();
+    }
+});
+
 const THEME_CLASSES = [
     'topbar-theme-invisible',
     'topbar-theme-tinted-dark',
@@ -280,6 +535,10 @@ export class ArreraTopBar {
         this._activitiesButton = null;
         this._signalIds = [];
         this._externalSignals = [];
+        this._indicatorsCardContainer = null;
+        this._sharingCard = null;
+        this._recordingCard = null;
+        this._menuOpenSignalId = null;
 
         // Écoute des réglages de fond d'écran et d'apparence GNOME
         this._bgSettings = new Gio.Settings({
@@ -619,6 +878,128 @@ export class ArreraTopBar {
         return false;
     }
 
+    _syncIndicatorsCardsVisibility() {
+        if (!this._indicatorsCardContainer)
+            return;
+
+        const hasVisible = (this._sharingCard && this._sharingCard.visible) ||
+                           (this._recordingCard && this._recordingCard.visible);
+        this._indicatorsCardContainer.visible = hasVisible;
+    }
+
+    _attachIndicatorsToQuickSettings() {
+        const qs = Main.panel?.statusArea?.quickSettings;
+        const menu = qs?.menu;
+        if (!qs || !menu || !menu._grid)
+            return;
+
+        // 1. Masquer les petits conteneurs bruts du panneau supérieur pour éviter les artéfacts visuels
+        const roles = [
+            'screenRecording',
+            'screenSharing',
+        ];
+        for (const role of roles) {
+            const container = Main.panel?.statusArea?.[role]?.container;
+            if (container)
+                container.visible = false;
+        }
+
+        // 2. Créer le conteneur élégant de cartes Adwaita dans les Paramètres Rapides
+        if (!this._indicatorsCardContainer) {
+            this._indicatorsCardContainer = new St.BoxLayout({
+                style_class: 'quick-settings-indicators-cards-box',
+                orientation: Clutter.Orientation.VERTICAL,
+                x_expand: true,
+                y_align: Clutter.ActorAlign.CENTER,
+                visible: false,
+            });
+
+            this._sharingCard = new QuickSettingsScreenSharingCard();
+            this._sharingCard.connect('notify::visible', () => this._syncIndicatorsCardsVisibility());
+            this._indicatorsCardContainer.add_child(this._sharingCard);
+
+            this._recordingCard = new QuickSettingsScreenRecordingCard();
+            this._recordingCard.connect('notify::visible', () => this._syncIndicatorsCardsVisibility());
+            this._indicatorsCardContainer.add_child(this._recordingCard);
+
+            // Insérer juste au-dessus du curseur de volume dans la grille des paramètres rapides
+            const volumeItem = qs._volumeOutput?.quickSettingsItems?.[0];
+            const colSpan = menu._grid.layout_manager?.nColumns || 2;
+
+            if (volumeItem && menu._grid.contains(volumeItem)) {
+                menu.insertItemBefore(this._indicatorsCardContainer, volumeItem, colSpan);
+            } else {
+                const firstItem = menu.getFirstItem();
+                if (firstItem)
+                    menu.insertItemBefore(this._indicatorsCardContainer, firstItem, colSpan);
+                else
+                    menu.addItem(this._indicatorsCardContainer, colSpan);
+            }
+        }
+
+        // Écouter l'ouverture du menu pour synchroniser instantanément l'affichage
+        if (!this._menuOpenSignalId) {
+            this._menuOpenSignalId = menu.connect('open-state-changed', (_m, open) => {
+                if (open) {
+                    this._sharingCard?._sync?.();
+                    this._recordingCard?._sync?.();
+                    this._syncIndicatorsCardsVisibility();
+                }
+            });
+        }
+
+        this._syncIndicatorsCardsVisibility();
+    }
+
+    _restoreIndicatorsFromQuickSettings() {
+        const qs = Main.panel?.statusArea?.quickSettings;
+        const menu = qs?.menu;
+
+        if (this._menuOpenSignalId && menu) {
+            try {
+                menu.disconnect(this._menuOpenSignalId);
+            } catch (e) {}
+            this._menuOpenSignalId = null;
+        }
+
+        if (this._indicatorsCardContainer) {
+            const parent = this._indicatorsCardContainer.get_parent();
+            if (parent)
+                parent.remove_child(this._indicatorsCardContainer);
+
+            if (this._sharingCard) {
+                this._sharingCard.destroy();
+                this._sharingCard = null;
+            }
+            if (this._recordingCard) {
+                this._recordingCard.destroy();
+                this._recordingCard = null;
+            }
+
+            this._indicatorsCardContainer.destroy();
+            this._indicatorsCardContainer = null;
+        }
+
+        // Rétablir la visibilité normale des conteneurs natifs
+        const roles = [
+            'screenRecording',
+            'screenSharing',
+        ];
+        for (const role of roles) {
+            const container = Main.panel?.statusArea?.[role]?.container;
+            if (container)
+                container.visible = true;
+        }
+    }
+
+    _isContainerOwnedByPanel(container) {
+        if (!container)
+            return false;
+        const panel = Main.panel;
+        const parent = container.get_parent();
+        return parent === panel || parent === panel?._leftBox || parent === panel?._centerBox || parent === panel?._rightBox;
+    }
+
     _updateBarVisibility() {
         const hidden = this._isBarHidden();
         const panel = Main.panel;
@@ -628,36 +1009,42 @@ export class ArreraTopBar {
             // 1. Libérer l'espace pour que les fenêtres maximisées montent jusqu'en haut
             this._setAffectsStruts(false);
 
-            // 2. Appliquer la classe CSS masquant le panneau sauf AppIndicator
+            // 2. Rattacher tous les indicateurs d'indication/statut au Control Center (quickSettings)
+            this._attachIndicatorsToQuickSettings();
+
+            // 3. Appliquer la classe CSS masquant le panneau sauf AppIndicator
             panel?.add_style_class_name('topbar-hidden-mode');
 
-            // 3. Masquer les éléments natifs et Arrera
+            // 4. Masquer les éléments natifs et Arrera (en préservant dateMenu et quickSettings s'ils sont adoptés par le Dock)
             if (this._activitiesButton)
                 this._activitiesButton.visible = false;
             if (panel?.statusArea?.activities?.container)
                 panel.statusArea.activities.container.visible = false;
-            if (panel?.statusArea?.dateMenu?.container)
+            if (panel?.statusArea?.dateMenu?.container && this._isContainerOwnedByPanel(panel.statusArea.dateMenu.container))
                 panel.statusArea.dateMenu.container.visible = false;
-            if (panel?.statusArea?.quickSettings?.container)
+            if (panel?.statusArea?.quickSettings?.container && this._isContainerOwnedByPanel(panel.statusArea.quickSettings.container))
                 panel.statusArea.quickSettings.container.visible = false;
 
-            // 4. Si une fenêtre est maximisée ou en plein écran sur le moniteur, masquer la pilule AppIndicator
+            // 5. Si une fenêtre est maximisée ou en plein écran sur le moniteur, masquer la pilule AppIndicator
             //    pour que la fenêtre puisse occuper tout l'écran sans être gênée
             const hasMaximized = this._hasMaximizedOrFullscreenWindow();
             if (panelBox)
                 panelBox.visible = !hasMaximized;
         } else {
-            // 1. Rétablir les struts pour que les fenêtres maximisées respectent la barre
+            // 1. Rétablir les indicateurs dans le panneau natif
+            this._restoreIndicatorsFromQuickSettings();
+
+            // 2. Rétablir les struts pour que les fenêtres maximisées respectent la barre
             this._setAffectsStruts(true);
 
-            // 2. Rétablir la visibilité normale de panelBox
+            // 3. Rétablir la visibilité normale de panelBox
             if (panelBox)
                 panelBox.visible = true;
 
-            // 3. Retirer la classe CSS
+            // 4. Retirer la classe CSS
             panel?.remove_style_class_name('topbar-hidden-mode');
 
-            // 4. Rétablir les éléments selon leurs réglages respectifs
+            // 5. Rétablir les éléments selon leurs réglages respectifs
             if (this._activitiesButton)
                 this._activitiesButton.visible = true;
             this._updateNativeActivitiesVisibility();
@@ -701,6 +1088,9 @@ export class ArreraTopBar {
         } catch (e) {
             console.warn(`[ArreraTopBar] Erreur déconnexion signaux fenêtres: ${e}`);
         }
+
+        // Rétablir inconditionnellement les indicateurs rattachés à Quick Settings
+        this._restoreIndicatorsFromQuickSettings();
 
         // Rétablir inconditionnellement les struts natifs de GNOME Shell
         this._setAffectsStruts(true);

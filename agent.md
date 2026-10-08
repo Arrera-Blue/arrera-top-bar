@@ -67,7 +67,7 @@ Gère la personnalisation de la barre supérieure et le remplacement propre du b
 * **Contrôle de `Main.panel` et des thèmes** :
   * Gère l'application dynamique des classes CSS selon la clé `theme` (`topbar-theme-invisible`, `topbar-theme-tinted-dark`, `topbar-theme-tinted-light`).
   * En mode `invisible`, applique la détection de luminosité du fond d'écran via `GdkPixbuf` (`topbar-elements-dark` vs `topbar-elements-light`) ou respecte le forçage utilisateur (`invisible-elements-color`).
-  * En mode `hide-top-bar`, applique `topbar-hidden-mode`, masque les composants natifs, libère les *struts* d'écran (`actorData.affectsStruts = false` dans `Main.layoutManager._trackedActors`), et affiche les icônes AppIndicator en pilule noire flottante sur le bureau tout en masquant dynamiquement le conteneur lorsqu'une fenêtre est maximisée ou en plein écran pour libérer l'accès aux boutons de contrôle.
+  * En mode `hide-top-bar`, applique `topbar-hidden-mode`, masque les composants natifs (en préservant `dateMenu` et `quickSettings` s'ils sont déportés hors du panneau), intègre l'ensemble des indicateurs de statut (`screenSharing`, `screenRecording`, `keyboard`, `a11y`, `dwellClick`) dans un bandeau centré dédié à l'intérieur du menu des Paramètres Rapides (`quickSettings.menu`), juste au-dessus du curseur de volume (affiché uniquement lorsqu'un indicateur est actif), libère les *struts* d'écran (`actorData.affectsStruts = false` dans `Main.layoutManager._trackedActors`), et affiche les icônes AppIndicator en pilule noire flottante sur le bureau tout en masquant dynamiquement le conteneur lorsqu'une fenêtre est maximisée ou en plein écran pour libérer l'accès aux boutons de contrôle.
 * **Intégration AppIndicator** :
   * Synchronise `appindicator-position` avec la clé `tray-pos` de `org.gnome.shell.extensions.appindicator` (`left` ou `right`).
   * Assure l'activation automatique de l'extension AppIndicator si disponible.
@@ -75,6 +75,7 @@ Gère la personnalisation de la barre supérieure et le remplacement propre du b
   * Enregistre les gestionnaires d'événements `changed::...` sur `_settings` et conserve leurs identifiants dans `_signalIds`.
 * **Méthode `destroy()`** :
   * Rétablit inconditionnellement les *struts* natifs (`affectsStruts = true` et `Main.layoutManager._queueUpdateRegions()`).
+  * Restaure tous les indicateurs de statut rattachés à Quick Settings dans leur conteneur d'origine (`Main.panel._rightBox`).
   * Détruit `ArreraActivitiesButton` et rétablit impérativement la visibilité native (`visible = true`) du bouton Activités, de la date (`dateMenu`) et des paramètres rapides (`quickSettings`).
   * Déconnecte tous les signaux GSettings via `_settings.disconnect(id)`.
   * Retire toutes les classes CSS personnalisées injectées dans `Main.panel`.
