@@ -1025,6 +1025,10 @@ export class ArreraTopBar {
             if (panel?.statusArea?.quickSettings?.container && this._isContainerOwnedByPanel(panel.statusArea.quickSettings.container))
                 panel.statusArea.quickSettings.container.visible = false;
 
+            const gpasteBtn = panel?.statusArea?.gpaste;
+            if (gpasteBtn)
+                gpasteBtn.add_style_class_name('gpaste-floating-pill');
+
             // 5. Si une fenêtre est maximisée ou en plein écran sur le moniteur, masquer la pilule AppIndicator
             //    pour que la fenêtre puisse occuper tout l'écran sans être gênée
             const hasMaximized = this._hasMaximizedOrFullscreenWindow();
@@ -1043,6 +1047,10 @@ export class ArreraTopBar {
 
             // 4. Retirer la classe CSS
             panel?.remove_style_class_name('topbar-hidden-mode');
+
+            const gpasteBtn = panel?.statusArea?.gpaste;
+            if (gpasteBtn)
+                gpasteBtn.remove_style_class_name('gpaste-floating-pill');
 
             // 5. Rétablir les éléments selon leurs réglages respectifs
             if (this._activitiesButton)
@@ -1117,6 +1125,10 @@ export class ArreraTopBar {
         }
         if (Main.panel.statusArea.quickSettings?.container) {
             Main.panel.statusArea.quickSettings.container.visible = true;
+        }
+
+        if (Main.panel.statusArea.gpaste) {
+            Main.panel.statusArea.gpaste.remove_style_class_name('gpaste-floating-pill');
         }
 
         // Rétablissement inconditionnel du style natif du panneau

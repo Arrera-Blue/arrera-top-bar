@@ -188,9 +188,10 @@
     border: none !important;
 }
 
-/* Petite pilule noire flottante pour les indicateurs d'applications */
+/* Petite pilule noire flottante pour les indicateurs d'applications et utilitaires comme GPaste */
 #panel.topbar-hidden-mode .panel-button.appindicator-status-icon,
-#panel.topbar-hidden-mode .appindicator-box {
+#panel.topbar-hidden-mode .appindicator-box,
+#panel.topbar-hidden-mode .panel-button.gpaste-floating-pill {
     background-color: rgba(18, 18, 18, 0.88);
     border-radius: 9999px;
     padding: 3px 8px;
@@ -199,18 +200,22 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:hover {
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:hover,
+#panel.topbar-hidden-mode .panel-button.gpaste-floating-pill:hover {
     background-color: rgba(35, 35, 35, 0.95);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.60);
     border-color: rgba(255, 255, 255, 0.25);
 }
 
 #panel.topbar-hidden-mode .panel-button.appindicator-status-icon:active,
-#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:checked {
+#panel.topbar-hidden-mode .panel-button.appindicator-status-icon:checked,
+#panel.topbar-hidden-mode .panel-button.gpaste-floating-pill:active,
+#panel.topbar-hidden-mode .panel-button.gpaste-floating-pill:checked {
     background-color: rgba(45, 45, 45, 1.0);
 }
 
-#panel.topbar-hidden-mode .appindicator-icon {
+#panel.topbar-hidden-mode .appindicator-icon,
+#panel.topbar-hidden-mode .panel-button.gpaste-floating-pill .system-status-icon {
     color: #ffffff;
     icon-size: 18px;
     icon-shadow: 0 1px 2px rgba(0, 0, 0, 0.80);
