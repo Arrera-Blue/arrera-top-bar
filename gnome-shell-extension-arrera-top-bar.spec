@@ -2,7 +2,7 @@
 
 Name:           gnome-shell-extension-arrera-top-bar
 Version:        1.0.0
-Release:        0.1.beta1%{?dist}
+Release:        0.2.beta1%{?dist}
 Summary:        Barre supérieure moderne pour GNOME Shell (Distribution Arrera Blue)
 
 License:        GPL-2.0-or-later

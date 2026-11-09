@@ -562,6 +562,8 @@ export class ArreraTopBar {
             }
         );
 
+        this._timeoutIds = [];
+
         // Initialisation de la liaison avec le moteur AppIndicator
         this._appIndicatorSettings = null;
         try {
@@ -588,10 +590,38 @@ export class ArreraTopBar {
             );
         }
 
+        // Surveillance dynamique pour déplacer GPaste et les indicateurs vers _leftBox si nécessaire
+        try {
+            if (Main.panel?._rightBox) {
+                Main.panel._rightBox.connectObject(
+                    'child-added', () => {
+                        const pos = this._getAppIndicatorPosition();
+                        if (pos === 'left') {
+                            this._syncGPastePosition('left');
+                            this._syncAllAppIndicatorIcons('left');
+                        }
+                    },
+                    this
+                );
+            }
+        } catch (e) {
+            console.warn(`[ArreraTopBar] Erreur connexion signal child-added _rightBox: ${e}`);
+        }
+
         this._ensureAppIndicatorExtensionEnabled();
         this._updateNativeActivitiesVisibility();
         this._applyTheme();
         this._applyAppIndicatorPosition();
+
+        // Synchronisations différées pour attraper GPaste ou AppIndicator lors du démarrage ou changement de saveur
+        for (const delay of [300, 1000, 2500]) {
+            this._addTimeout(delay, () => {
+                if (!this._settings)
+                    return GLib.SOURCE_REMOVE;
+                this._applyAppIndicatorPosition();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
 
         // Écoute de l'Overview pour garantir que le panneau reste masqué lors de l'ouverture/fermeture
         try {
@@ -637,6 +667,16 @@ export class ArreraTopBar {
         return 'right';
     }
 
+    _addTimeout(interval, callback) {
+        const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
+            const idx = this._timeoutIds.indexOf(id);
+            if (idx !== -1)
+                this._timeoutIds.splice(idx, 1);
+            return callback();
+        });
+        this._timeoutIds.push(id);
+    }
+
     _applyAppIndicatorPosition() {
         const pos = this._getAppIndicatorPosition();
         if (this._appIndicatorSettings?.settings_schema?.has_key('tray-pos')) {
@@ -645,6 +685,60 @@ export class ArreraTopBar {
                     this._appIndicatorSettings.set_string('tray-pos', pos);
             } catch (e) {
                 console.warn(`[ArreraTopBar] Erreur lors de la mise à jour de tray-pos: ${e}`);
+            }
+        }
+        this._syncGPastePosition(pos);
+        this._syncAllAppIndicatorIcons(pos);
+    }
+
+    _syncGPastePosition(pos) {
+        const gpaste = Main.panel?.statusArea?.gpaste;
+        if (!gpaste || !gpaste.container)
+            return;
+
+        const container = gpaste.container;
+        if (!this._isContainerOwnedByPanel(container))
+            return;
+
+        const currentParent = container.get_parent();
+        const targetBox = (pos === 'left') ? Main.panel._leftBox : Main.panel._rightBox;
+
+        if (targetBox && currentParent && currentParent !== targetBox) {
+            currentParent.remove_child(container);
+            if (pos === 'left') {
+                targetBox.add_child(container);
+            } else {
+                targetBox.insert_child_at_index(container, 0);
+            }
+        }
+
+        if (this._isBarHidden()) {
+            container.visible = true;
+            gpaste.add_style_class_name('gpaste-floating-pill');
+        }
+    }
+
+    _syncAllAppIndicatorIcons(pos) {
+        const targetBox = (pos === 'left') ? Main.panel._leftBox : Main.panel._rightBox;
+        if (!targetBox || !Main.panel?.statusArea)
+            return;
+
+        for (const [key, indicator] of Object.entries(Main.panel.statusArea)) {
+            if (!key.startsWith('appindicator-'))
+                continue;
+
+            const container = indicator?.container || indicator;
+            if (!container || typeof container.get_parent !== 'function')
+                continue;
+
+            const currentParent = container.get_parent();
+            if (currentParent && currentParent !== targetBox && this._isContainerOwnedByPanel(container)) {
+                currentParent.remove_child(container);
+                if (pos === 'left') {
+                    targetBox.add_child(container);
+                } else {
+                    targetBox.insert_child_at_index(container, 0);
+                }
             }
         }
     }
@@ -945,21 +1039,24 @@ export class ArreraTopBar {
                 console.warn(`[ArreraTopBar] Erreur rattachement indicateurs à Quick Settings: ${e}`);
             }
 
-            // 3. Masquer totalement et inconditionnellement le panneau et sa boîte
+            // 3. Panneau transparent en mode pilule flottante pour AppIndicator et GPaste
             if (panelBox) {
-                panelBox.visible = false;
-                panelBox.set_height(0);
+                panelBox.visible = true;
+                panelBox.set_height(-1);
             }
             if (panel) {
-                panel.visible = false;
+                panel.visible = true;
                 panel.reactive = false;
-                panel.set_height(0);
+                panel.set_height(-1);
                 panel.add_style_class_name('topbar-hidden-mode');
             }
 
             // 4. Masquer les éléments natifs et Arrera (en préservant dateMenu et quickSettings s'ils sont adoptés par le Dock)
-            if (this._activitiesButton)
+            if (this._activitiesButton) {
                 this._activitiesButton.visible = false;
+                if (this._activitiesButton.container)
+                    this._activitiesButton.container.visible = false;
+            }
             if (panel?.statusArea?.activities?.container)
                 panel.statusArea.activities.container.visible = false;
             if (panel?.statusArea?.dateMenu?.container && this._isContainerOwnedByPanel(panel.statusArea.dateMenu.container))
@@ -968,8 +1065,12 @@ export class ArreraTopBar {
                 panel.statusArea.quickSettings.container.visible = false;
 
             const gpasteBtn = panel?.statusArea?.gpaste;
-            if (gpasteBtn && this._isContainerOwnedByPanel(gpasteBtn.container))
-                gpasteBtn.container.visible = false;
+            if (gpasteBtn && this._isContainerOwnedByPanel(gpasteBtn.container)) {
+                gpasteBtn.container.visible = true;
+                gpasteBtn.add_style_class_name('gpaste-floating-pill');
+            }
+
+            this._applyAppIndicatorPosition();
 
             Main.layoutManager._queueUpdateRegions();
         } else {
@@ -996,8 +1097,13 @@ export class ArreraTopBar {
             }
 
             const gpasteBtn = panel?.statusArea?.gpaste;
-            if (gpasteBtn)
+            if (gpasteBtn) {
                 gpasteBtn.remove_style_class_name('gpaste-floating-pill');
+                if (gpasteBtn.container && gpasteBtn.container.get_parent() === panel._leftBox && this._getAppIndicatorPosition() !== 'left') {
+                    panel._leftBox.remove_child(gpasteBtn.container);
+                    panel._rightBox.insert_child_at_index(gpasteBtn.container, 0);
+                }
+            }
 
             // 4. Rétablir les éléments selon leurs réglages respectifs
             if (this._activitiesButton)
@@ -1039,6 +1145,18 @@ export class ArreraTopBar {
     }
 
     destroy() {
+        // Annuler les timeouts différés
+        if (this._timeoutIds) {
+            for (const id of this._timeoutIds)
+                GLib.Source.remove(id);
+            this._timeoutIds = [];
+        }
+
+        // Déconnexion de la surveillance dynamique du panneau
+        try {
+            Main.panel?._rightBox?.disconnectObject(this);
+        } catch (e) {}
+
         // Déconnexion de l'Overview
         try {
             Main.overview?.disconnectObject(this);
@@ -1088,11 +1206,29 @@ export class ArreraTopBar {
             Main.panel.statusArea.quickSettings.container.visible = true;
         }
         if (Main.panel?.statusArea?.gpaste?.container) {
-            Main.panel.statusArea.gpaste.container.visible = true;
+            const container = Main.panel.statusArea.gpaste.container;
+            if (container.get_parent() === Main.panel._leftBox) {
+                Main.panel._leftBox.remove_child(container);
+                Main.panel._rightBox.insert_child_at_index(container, 0);
+            }
+            container.visible = true;
         }
 
         if (Main.panel?.statusArea?.gpaste) {
             Main.panel.statusArea.gpaste.remove_style_class_name('gpaste-floating-pill');
+        }
+
+        // Rétablir les icônes AppIndicator dans _rightBox si elles avaient été déplacées dans _leftBox
+        if (Main.panel?.statusArea) {
+            for (const [key, indicator] of Object.entries(Main.panel.statusArea)) {
+                if (!key.startsWith('appindicator-'))
+                    continue;
+                const container = indicator?.container || indicator;
+                if (container?.get_parent?.() === Main.panel._leftBox) {
+                    Main.panel._leftBox.remove_child(container);
+                    Main.panel._rightBox.insert_child_at_index(container, 0);
+                }
+            }
         }
 
         Main.layoutManager._queueUpdateRegions();
